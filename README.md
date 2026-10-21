@@ -164,7 +164,7 @@ Sensitive operations always need confirmation. With an interactive-card template
 
 - Direct messages and configured group chats.
 - Guided access policies for all senders, owner-only, or selected sender staff IDs, and for all, no, or selected groups.
-- AI Card streaming, Markdown and text replies.
+- AI Card streaming with one live status line (thinking / running a command / reading a file; no accumulating tool log), plus Markdown and text replies.
 - Native DSH session persistence, model selection, workspace switching, cancellation and queues.
 - DSH user questions, Plan Review and fail-closed sensitive-operation approval via owner-only text codes or optional interactive cards.
 - QR-based DingTalk app registration with manual Client ID / Client Secret fallback.
