@@ -164,8 +164,27 @@ export class AICard {
 
   /** Final content + FINISHED state. */
   async finish(content: string): Promise<void> {
-    await this.stream(content, true)
-    await this.call('PUT', '/v1.0/card/instances', this.instancesBody(FLOW.FINISHED, content, true))
+    // The finalize streaming frame can fail (rate limit after the in-call
+    // retry, or a transient 5xx). It must never skip the FINISHED instance
+    // update: a card left mid-stream keeps DingTalk's "输入中" loading
+    // indicator on screen forever.
+    try {
+      await this.stream(content, true)
+    } catch (err) {
+      this.log(`card finalize frame failed, forcing FINISHED: ${err instanceof Error ? err.message : err}`)
+    }
+    await this.writeFinished(content)
+  }
+
+  /** Terminal write, retried once for transient failures so the spinner clears. */
+  private async writeFinished(content: string): Promise<void> {
+    try {
+      await this.call('PUT', '/v1.0/card/instances', this.instancesBody(FLOW.FINISHED, content, true))
+    } catch (err) {
+      if (err instanceof CardCapabilityError) throw err
+      await sleep(500)
+      await this.call('PUT', '/v1.0/card/instances', this.instancesBody(FLOW.FINISHED, content, true))
+    }
   }
 
   /**
