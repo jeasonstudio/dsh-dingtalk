@@ -518,6 +518,7 @@ async function startAccount(
         robotCode: clientId,
         target,
         capability: cardCapability,
+        lifecycle: config.streaming.lifecycle,
         log,
       }),
     log,
@@ -838,6 +839,7 @@ async function startAccount(
               robotCode: clientId,
               target,
               capability: cardCapability,
+              lifecycle: config.streaming.lifecycle,
               log,
             })
             if (!card) {

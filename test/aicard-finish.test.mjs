@@ -79,3 +79,32 @@ test('FINISHED 写入遇到瞬时失败时重试一次', async () => {
     },
   )
 })
+
+test('finalize 生命周期不进入输入中状态，帧帧都是完成态', async () => {
+  await withFetch(
+    async () => new Response('{}', { status: 200 }),
+    async (calls) => {
+      const card = await AICard.create({
+        token: async () => 'token',
+        robotCode: 'robot',
+        target: { type: 'user', userId: 'u1' },
+        lifecycle: 'finalize',
+        log: () => {},
+      })
+      assert.ok(card)
+
+      await card.stream('第一帧')
+      await card.stream('第二帧')
+      await card.finish('定稿')
+
+      const flowStatuses = calls
+        .filter((call) => call.method === 'PUT' && call.url.includes('/v1.0/card/instances'))
+        .map((call) => call.body.cardData.cardParamMap.flowStatus)
+      assert.deepEqual(flowStatuses, ['3', '3', '3'])
+
+      const streams = calls.filter((call) => call.url.includes('/v1.0/card/streaming'))
+      assert.equal(streams.length, 3)
+      assert.ok(streams.every((call) => call.body.isFinalize === true))
+    },
+  )
+})

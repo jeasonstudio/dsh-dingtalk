@@ -13,6 +13,17 @@ const AI_CARD_TEMPLATE_ID = '02fcf2f4-5e02-4a85-b672-46d1f715543e.schema'
 
 const FLOW = { PROCESSING: '1', INPUTING: '2', FINISHED: '3', FAILED: '5' } as const
 
+/**
+ * How live frames are written.
+ * - `stream`: enter DingTalk's 输入中 state and stream deltas — the native
+ *   typing experience, but the client renders its loading indicator (the
+ *   literal `[AILoading]` placeholder some clients show).
+ * - `finalize`: never enter 输入中; every frame is a finished snapshot
+ *   (finalize frame + FINISHED instances). No loading indicator and no
+ *   typewriter effect; costs two card API calls per frame.
+ */
+export type CardLifecycle = 'stream' | 'finalize'
+
 const QPS_BACKOFF_MS = 2_000
 
 const STREAMING_PERMISSION = 'Card.Streaming.Write'
@@ -96,6 +107,7 @@ export class AICard {
     private readonly token: () => Promise<string>,
     private readonly capability: CardCapability,
     private readonly log: (line: string) => void,
+    private readonly lifecycle: CardLifecycle = 'stream',
   ) {}
 
   private async call(method: 'POST' | 'PUT', path: string, body: unknown): Promise<void> {
@@ -142,12 +154,8 @@ export class AICard {
     }
   }
 
-  /** Stream one full-content frame; `finished` marks the last frame. */
-  async stream(content: string, finished = false): Promise<void> {
-    if (!this.#inputingStarted) {
-      await this.call('PUT', '/v1.0/card/instances', this.instancesBody(FLOW.INPUTING, content, false))
-      this.#inputingStarted = true
-    }
+  /** Write one streaming frame; `finished` closes the stream. */
+  private async writeFrame(content: string, finished: boolean): Promise<void> {
     const fixed = normalize(content)
     await this.call('PUT', '/v1.0/card/streaming', {
       outTrackId: this.outTrackId,
@@ -162,6 +170,22 @@ export class AICard {
     })
   }
 
+  /** Stream one full-content frame; `finished` marks the last frame. */
+  async stream(content: string, finished = false): Promise<void> {
+    if (this.lifecycle === 'finalize') {
+      // Never enter 输入中: the card is always a settled snapshot. The finalize
+      // frame is what makes a finished card repaint its content.
+      await this.writeFrame(content, true)
+      await this.writeFinished(content)
+      return
+    }
+    if (!this.#inputingStarted) {
+      await this.call('PUT', '/v1.0/card/instances', this.instancesBody(FLOW.INPUTING, content, false))
+      this.#inputingStarted = true
+    }
+    await this.writeFrame(content, finished)
+  }
+
   /** Final content + FINISHED state. */
   async finish(content: string): Promise<void> {
     // The finalize streaming frame can fail (rate limit after the in-call
@@ -169,7 +193,8 @@ export class AICard {
     // update: a card left mid-stream keeps DingTalk's "输入中" loading
     // indicator on screen forever.
     try {
-      await this.stream(content, true)
+      if (this.lifecycle === 'finalize') await this.writeFrame(content, true)
+      else await this.stream(content, true)
     } catch (err) {
       this.log(`card finalize frame failed, forcing FINISHED: ${err instanceof Error ? err.message : err}`)
     }
@@ -195,16 +220,8 @@ export class AICard {
    * frame first, then the FINISHED instances update.
    */
   async updateStatic(content: string): Promise<void> {
-    await this.call('PUT', '/v1.0/card/streaming', {
-      outTrackId: this.outTrackId,
-      guid: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      key: 'msgContent',
-      content: normalize(content),
-      isFull: true,
-      isFinalize: true,
-      isError: false,
-    })
-    await this.call('PUT', '/v1.0/card/instances', this.instancesBody(FLOW.FINISHED, content, true))
+    await this.writeFrame(content, true)
+    await this.writeFinished(content)
   }
 
   /** Freeze the card in FAILED state with a human-readable error text. */
@@ -227,11 +244,12 @@ export class AICard {
     target: CardTarget
     capability?: CardCapability
     log: (line: string) => void
+    lifecycle?: CardLifecycle
   }): Promise<AICard | null> {
     const capability = opts.capability ?? new CardCapability()
     if (!capability.available) return null
     const outTrackId = `dshdt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
-    const card = new AICard(outTrackId, opts.token, capability, opts.log)
+    const card = new AICard(outTrackId, opts.token, capability, opts.log, opts.lifecycle ?? 'stream')
     const deliverBody =
       opts.target.type === 'group'
         ? {

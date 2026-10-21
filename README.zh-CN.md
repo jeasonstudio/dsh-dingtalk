@@ -185,7 +185,7 @@ pnpm config get registry
 
 - 私聊和按策略允许的群聊。
 - setup 可选择允许所有发送者、仅管理员或指定 sender staffId，也可选择所有群、禁止群聊或指定群。
-- AI Card 流式回复（单行实时状态：思考中 / 正在执行命令 / 已读取文件，不累积工具历史），以及 Markdown、文本降级。
+- AI Card 回复（单行实时状态：思考中 / 正在执行命令 / 已读取文件，不累积工具历史），默认以完成态刷新、不显示钉钉「输入中」的 `[AILoading]` 占位（`streaming.lifecycle: "stream"` 可换回原生打字机效果），以及 Markdown、文本降级。
 - DSH session 持久化、模型切换、工作区切换、取消和排队。
 - DSH 原生用户提问、Plan Review 和 fail-closed 敏感操作审批；文字确认码和可选互动卡片均只接受管理员。
 - 扫码创建钉钉应用，手动 Client ID / Client Secret 作为备用。
