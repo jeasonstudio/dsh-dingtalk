@@ -279,11 +279,16 @@ function breadcrumbItem(step: ToolActivity): string {
   return step.summary ? `${phrase} ${truncateTo(step.summary, ITEM_SUMMARY)}` : phrase
 }
 
+export interface ProcessLineOptions {
+  /** Include `用时`; history lines leave it to the turn's folded header. */
+  readonly elapsed?: boolean
+}
+
 /**
  * The live process line, or '' when the turn has nothing to report yet.
  * Shape: `⚙️ 正在执行命令 pnpm build · 已完成 4 步：读取文件 a.ts · 搜索 TODO 等 · 用时 23 秒`
  */
-export function renderProcessLine(snapshot: ProcessSnapshot): string {
+export function renderProcessLine(snapshot: ProcessSnapshot, options: ProcessLineOptions = {}): string {
   const done = snapshot.steps.filter((step) => step.state !== 'running')
   // Newest running step wins: an older call still in flight must not shadow the
   // one the model just started.
@@ -314,7 +319,7 @@ export function renderProcessLine(snapshot: ProcessSnapshot): string {
   // costs a wrapped line on a phone.
   const thought = formatDuration(snapshot.thinkingMs)
   if (!snapshot.thinking && done.length === 0 && !running && thought) segments.push(`已思考 ${thought}`)
-  const took = formatDuration(snapshot.elapsedMs)
+  const took = options.elapsed === false ? '' : formatDuration(snapshot.elapsedMs)
   if (took) segments.push(`用时 ${took}`)
 
   if (segments.length === 0) return ''
