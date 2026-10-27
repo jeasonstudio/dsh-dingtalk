@@ -1,12 +1,12 @@
 # DSH DingTalk 发布仓库实施规格
 
-本仓库是 `@dingtalk-real-ai/dsh-dingtalk` 的 DingTalk Real AI 官方公开主线。它以验收通过的源码快照建立干净 initial commit，不继承个人孵化仓库或内网仓库的 Git 历史。
+本仓库是 `@groowork/channel-dingtalk` 的 DingTalk Real AI 官方公开主线。它以验收通过的源码快照建立干净 initial commit，不继承个人孵化仓库或内网仓库的 Git 历史。
 
 ## 第一版范围
 
 - 只发布一个 NPM 包，不发布独立 SDK。
 - 只保证兼容最新版本 DeepSeek Harness，并只管理 `web` profile。
-- 首选入口为 `npx @dingtalk-real-ai/dsh-dingtalk@latest setup`。
+- 首选入口为 `npx @groowork/channel-dingtalk@latest setup`。
 - `setup` 负责 DSH 检查、精确版本插件安装、钉钉应用凭据、DWS 开关、图片模式、管理员绑定和启动提示。
 - `doctor` 是只读诊断入口。
 - 单个 `dsh web` 实例可启动多个钉钉机器人；各机器人的凭据、Stream、管理员绑定和状态文件相互隔离，单个机器人故障不得阻止其他机器人启动。

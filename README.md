@@ -31,13 +31,13 @@ Install the DingTalk connector using the AI Native setup flow in this README. Ru
 Resolve the stable release version first, then pin every step to that version:
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@latest --version
+npx @groowork/channel-dingtalk@latest --version
 ```
 
 Record the output as `<version>`, then generate a strictly read-only plan. Use `default` for a new installation; select an account explicitly when several already exist.
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --plan --json --account default
+npx @groowork/channel-dingtalk@<version> setup --plan --json --account default
 ```
 
 The plan only reads local configuration and the process table, and runs `dsh --version` and `pnpm --version`. It never installs, writes files, creates binding codes, or controls processes. Its stable output includes `planId`, actions, required approvals, and an `answerTemplate`. Replace every `null` with an explicit choice and save the result as JSON:
@@ -67,7 +67,7 @@ The plan only reads local configuration and the process table, and runs `dsh --v
 Keep DSH or pnpm installation approval `false` when the plan does not request that action. Set it to `true` only after explicit user approval; machine mode never assumes “yes.” Apply the plan with:
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --apply --json --answers <answers.json>
+npx @groowork/channel-dingtalk@<version> setup --apply --json --answers <answers.json>
 ```
 
 Common outcomes:
@@ -92,7 +92,7 @@ JSON mode writes exactly one complete JSON document to stdout. Exit code `0` mea
 Private resume omits `--json` and is accepted only in an interactive terminal:
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --resume <checkpoint-id>
+npx @groowork/channel-dingtalk@<version> setup --resume <checkpoint-id>
 ```
 
 The TTY check prevents accidental pipe or headless use; it cannot prove that a human owns the terminal. Automation that allocates or records a PTY can capture what is displayed. Stop the agent at this handoff and run the command yourself in a terminal session that the agent does not control or record.
@@ -100,8 +100,8 @@ The TTY check prevents accidental pipe or headless use; it cannot prove that a h
 After the private step or owner binding, let the AI re-inspect real state. Concurrent resumes are serialized and checkpointed completed steps are skipped. If the process is killed after an external command succeeds but before its checkpoint write, the same exact-version idempotent command can be retried.
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --resume <checkpoint-id> --json
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor --json
+npx @groowork/channel-dingtalk@<version> setup --resume <checkpoint-id> --json
+npx @groowork/channel-dingtalk@<version> doctor --json
 ```
 
 Finally, send one real direct message to the bot. `doctor` validates local configuration and recent runtime observations; it does not replace live message-path acceptance.
@@ -115,7 +115,7 @@ Dead setup-lock owners are normally recovered automatically. If a process is for
 Without AI orchestration, use the original guided flow:
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@latest setup
+npx @groowork/channel-dingtalk@latest setup
 ```
 
 The guide checks DSH and pnpm, asks before installing a missing or incompatible dependency, installs this exact connector version, collects credentials, configures DWS, image and access policies, creates the owner-binding code, and offers to start `dsh web`. It never upgrades an existing DSH installation automatically.
@@ -129,7 +129,7 @@ While DSH is in prerelease, the registry must contain the matching prerelease ve
 Before installing the plugin, setup reads `npm config get registry` and writes the registry without URL-embedded credentials to `$DSH_HOME/profiles/web/.npmrc` (default: `~/.dsh/profiles/web/.npmrc`). This keeps the outer npm process and the pnpm process launched by DSH on the same registry while preserving scoped registries, authentication, and other existing `.npmrc` settings. If the enterprise registry is incomplete, retry once with a registry that has the complete package set; the override now also reaches the later pnpm step:
 
 ```bash
-npm_config_registry=https://registry.npmjs.org npx @dingtalk-real-ai/dsh-dingtalk@latest setup
+npm_config_registry=https://registry.npmjs.org npx @groowork/channel-dingtalk@latest setup
 ```
 
 You can also set and verify the web profile's project-level registry manually. Replace the directory when using a custom `DSH_HOME`:
@@ -145,7 +145,7 @@ pnpm config get registry
 
 You can mix both modes, and you always start the task:
 
-1. **Operate locally:** run `npx @dingtalk-real-ai/dsh-dingtalk@latest setup` in a terminal to change settings, or `npx @dingtalk-real-ai/dsh-dingtalk@latest doctor` to inspect the connection. To stop the service, press `Ctrl+C` in the terminal running `dsh web`.
+1. **Operate locally:** run `npx @groowork/channel-dingtalk@latest setup` in a terminal to change settings, or `npx @groowork/channel-dingtalk@latest doctor` to inspect the connection. To stop the service, press `Ctrl+C` in the terminal running `dsh web`.
 2. **Ask the bot to help:** after `dsh web` is connected, send the bot a goal such as “run this project's tests and explain any failures.” The bot works in the current conversation workspace within the operations allowed by DSH. It asks you for missing details, Plan Review, or sensitive-operation approval through messages or interactive cards.
 
 If a project lives on an external volume or a volume named `A`, for example `/Volumes/A/my-project`, send this in that DingTalk conversation first:
@@ -184,35 +184,35 @@ For every machine step belonging to one checkpoint, replace `<version>` with the
 
 ```bash
 # Install and configure, or reopen the configuration menu
-npx @dingtalk-real-ai/dsh-dingtalk@latest setup
+npx @groowork/channel-dingtalk@latest setup
 
 # Produce a read-only machine plan
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --plan --json --account default
+npx @groowork/channel-dingtalk@<version> setup --plan --json --account default
 
 # Apply explicit non-secret answers
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --apply --json --answers <answers.json>
+npx @groowork/channel-dingtalk@<version> setup --apply --json --answers <answers.json>
 
 # Private human handoff; requires an interactive terminal
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --resume <checkpoint-id>
+npx @groowork/channel-dingtalk@<version> setup --resume <checkpoint-id>
 
 # Idempotent machine resume
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --resume <checkpoint-id> --json
+npx @groowork/channel-dingtalk@<version> setup --resume <checkpoint-id> --json
 
 # Validate local state and DingTalk credentials
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor
+npx @groowork/channel-dingtalk@<version> doctor
 
 # Stable, redacted machine diagnostics
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor --json
+npx @groowork/channel-dingtalk@<version> doctor --json
 
 # Avoid network calls
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor --offline
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor --offline --json
+npx @groowork/channel-dingtalk@<version> doctor --offline
+npx @groowork/channel-dingtalk@<version> doctor --offline --json
 ```
 
 The `npx` command does not create a persistent `dsh-dingtalk` command. If you want that shorter form, install the package globally once:
 
 ```bash
-npm install --global @dingtalk-real-ai/dsh-dingtalk@latest
+npm install --global @groowork/channel-dingtalk@latest
 dsh-dingtalk setup
 dsh-dingtalk doctor
 ```
@@ -238,7 +238,7 @@ Chat access never grants sensitive approval authority. Interactive-card and text
 The one-command setup is recommended. Advanced users may install the package through DSH directly:
 
 ```bash
-dsh plugin --profile web add @dingtalk-real-ai/dsh-dingtalk@latest
+dsh plugin --profile web add @groowork/channel-dingtalk@latest
 dsh web
 ```
 

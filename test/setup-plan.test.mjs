@@ -298,7 +298,7 @@ test('版本探测不把命令原始输出或路径带入机器计划', async (t
       runner,
       dshHome: path.join(root, '.dsh'),
       stateDir: path.join(root, '.state'),
-      installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.5.2',
+      installSpec: '@groowork/channel-dingtalk@0.5.2',
       service: { webStatus: 'stopped' },
       nodeVersion: '24.2.0',
     },

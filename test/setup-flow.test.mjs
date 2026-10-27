@@ -255,7 +255,7 @@ test('setup 在插件安装前把当前 npm registry 同步到 web profile', asy
     runner,
     dshHome,
     stateDir: path.join(root, '.dsh-dingtalk'),
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.6.0',
+    installSpec: '@groowork/channel-dingtalk@0.6.0',
   })
 
   assert.equal(result.code, 0)
@@ -289,7 +289,7 @@ test('插件安装失败时 loading 以失败态和完成态文案收尾', async
     runner: new PluginFailureRunner(),
     dshHome: path.join(root, '.dsh'),
     stateDir: path.join(root, '.dsh-dingtalk'),
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.6.0',
+    installSpec: '@groowork/channel-dingtalk@0.6.0',
   })
 
   assert.equal(result.code, 1)
@@ -311,7 +311,7 @@ test('插件安装失败时提取 pnpm 根因并保留完整日志', async (t) =
     runner: new PluginPnpmFailureRunner(),
     dshHome: path.join(root, '.dsh'),
     stateDir,
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.6.0',
+    installSpec: '@groowork/channel-dingtalk@0.6.0',
   })
 
   assert.equal(result.code, 1)
@@ -323,7 +323,7 @@ test('插件安装失败时提取 pnpm 根因并保留完整日志', async (t) =
   assert.match(displayed, /依赖：@deepseek-ai\/dsh-base@0\.1\.1-rc\.2/)
   assert.doesNotMatch(displayed, /private-secret/)
   assert.match(displayed, /建议：当前 registry 可能缺少该版本/)
-  assert.match(displayed, /npm_config_registry=<可用 registry> npx @dingtalk-real-ai\/dsh-dingtalk@latest setup/)
+  assert.match(displayed, /npm_config_registry=<可用 registry> npx @groowork\/channel-dingtalk@latest setup/)
   assert.match(displayed, /~\/\.dsh\/profiles\/web\/\.npmrc/)
   assert.doesNotMatch(displayed, /Progress: resolved/)
 
@@ -358,7 +358,7 @@ test('安装失败按权限、网络和磁盘错误给出可执行建议', async
       runner: new CategorizedPluginFailureRunner(stderr),
       dshHome: path.join(root, '.dsh'),
       stateDir: path.join(root, '.dsh-dingtalk'),
-      installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.6.0',
+      installSpec: '@groowork/channel-dingtalk@0.6.0',
     })
 
     assert.equal(result.code, 1)
@@ -383,7 +383,7 @@ test('DSH 与 pnpm 安装失败共用结构化摘要和完整日志', async (t) 
       runner: new BootstrapInstallFailureRunner(stage),
       dshHome: path.join(root, '.dsh'),
       stateDir: path.join(root, '.dsh-dingtalk'),
-      installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.6.0',
+      installSpec: '@groowork/channel-dingtalk@0.6.0',
     })
 
     assert.equal(result.code, 2)
@@ -415,7 +415,7 @@ test('setup 在交互完成后的实际写入点重新探测 DSH 版本', async 
     runner,
     dshHome,
     stateDir: path.join(root, '.dsh-dingtalk'),
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.5.0',
+    installSpec: '@groowork/channel-dingtalk@0.5.0',
   })
 
   assert.equal(result.code, 0)
@@ -448,14 +448,14 @@ test('首次 setup 自动安装精确插件版本并完成完整引导', async (
     runner,
     dshHome,
     stateDir,
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.1.0-beta.1',
+    installSpec: '@groowork/channel-dingtalk@0.1.0-beta.1',
   })
 
   assert.equal(result.code, 0)
   assert.equal(result.startWeb, false)
   assert.deepEqual(
     runner.calls.find((call) => call[1] === 'plugin'),
-    ['dsh', 'plugin', '--profile', 'web', 'add', '@dingtalk-real-ai/dsh-dingtalk@0.1.0-beta.1'],
+    ['dsh', 'plugin', '--profile', 'web', 'add', '@groowork/channel-dingtalk@0.1.0-beta.1'],
   )
   assert.deepEqual(
     ui.messages.filter((message) => message.includes('安装 DSH web profile 插件')),
@@ -511,7 +511,7 @@ test('已有旧版 DSH 时 setup 不检查 latest 或要求升级', async (t) =>
     runner,
     dshHome: path.join(root, '.dsh'),
     stateDir: path.join(root, '.dsh-dingtalk'),
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.5.0',
+    installSpec: '@groowork/channel-dingtalk@0.5.0',
   })
 
   assert.equal(result.code, 0)
@@ -522,7 +522,7 @@ test('已有旧版 DSH 时 setup 不检查 latest 或要求升级', async (t) =>
   assert.equal(ui.confirmMessages.has('updateDsh'), false)
   assert.deepEqual(
     runner.calls.find((call) => call[0] === 'dsh' && call[1] === 'plugin'),
-    ['dsh', 'plugin', '--profile', 'web', 'add', '@dingtalk-real-ai/dsh-dingtalk@0.5.0'],
+    ['dsh', 'plugin', '--profile', 'web', 'add', '@groowork/channel-dingtalk@0.5.0'],
   )
   assert.deepEqual(parse(await readFile(path.join(root, '.dsh', '.credentials.yaml'), 'utf8')), {
     DINGTALK_CLIENT_ID: 'ding-app',
@@ -561,7 +561,7 @@ test('重复 setup 可只修改功能配置并保留现有凭据', async (t) => 
     runner: new FakeRunner(),
     dshHome,
     stateDir,
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.1.0-beta.2',
+    installSpec: '@groowork/channel-dingtalk@0.1.0-beta.2',
   })
 
   assert.equal(result.code, 0)
@@ -617,7 +617,7 @@ test('修改功能配置不会使仍有效的机器人绑定口令失效', async
     runner: new FakeRunner(),
     dshHome,
     stateDir,
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.2.2',
+    installSpec: '@groowork/channel-dingtalk@0.2.2',
   })
 
   assert.equal(result.code, 0)
@@ -647,7 +647,7 @@ test('重复 setup 可新增第二个机器人账号且不覆盖默认账号', a
     runner: new FakeRunner(),
     dshHome,
     stateDir,
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.2.0-beta.1',
+    installSpec: '@groowork/channel-dingtalk@0.2.0-beta.1',
   })
 
   assert.equal(result.code, 0)
@@ -706,7 +706,7 @@ test('绑定菜单按机器人展示绑定状态，并一次生成所有已启�
     runner: new FakeRunner(),
     dshHome,
     stateDir,
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.2.2',
+    installSpec: '@groowork/channel-dingtalk@0.2.2',
   })
 
   assert.equal(result.code, 0)
@@ -742,7 +742,7 @@ test('setup 菜单中的只读诊断按账号展示结果', async (t) => {
     runner: new FakeRunner(),
     dshHome,
     stateDir,
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.2.0-beta.1',
+    installSpec: '@groowork/channel-dingtalk@0.2.0-beta.1',
   })
 
   assert.equal(result.runDoctor, true)
@@ -765,7 +765,7 @@ test('setup 自动升级不兼容的旧 pnpm 后再安装插件', async (t) => {
     runner,
     dshHome: path.join(root, '.dsh'),
     stateDir: path.join(root, '.dsh-dingtalk'),
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.1.0-beta.1',
+    installSpec: '@groowork/channel-dingtalk@0.1.0-beta.1',
   })
 
   assert.equal(result.code, 0)
@@ -804,7 +804,7 @@ test('仅配置数字员工时 setup 不要求机器人凭据并可管理 operat
     runner: new FakeRunner(),
     dshHome,
     stateDir: path.join(root, '.dsh-dingtalk'),
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.5.0',
+    installSpec: '@groowork/channel-dingtalk@0.5.0',
   })
 
   assert.equal(result.code, 0)
@@ -847,7 +847,7 @@ test('setup 只能确认 connect 写入的 operator，拒绝后不允许本地�
       runner: new FakeRunner(),
       dshHome,
       stateDir: path.join(root, '.dsh-dingtalk'),
-      installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.5.0',
+      installSpec: '@groowork/channel-dingtalk@0.5.0',
     }),
     /operator_confirmation_required/,
   )

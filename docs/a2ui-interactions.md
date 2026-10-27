@@ -2,7 +2,7 @@
 
 ## 状态和范围
 
-通用模块通过同一 NPM 包的 `@dingtalk-real-ai/dsh-dingtalk/a2ui` 子路径提供，不拆分 SDK。
+通用模块通过同一 NPM 包的 `@groowork/channel-dingtalk/a2ui` 子路径提供，不拆分 SDK。
 数字员工默认运行流程已接线：`interactionMode` 默认为 `auto`，兼容 DWS 上优先使用 A2UI；不需要员工 UUID 环境变量。
 机器人无 DWS／可信 OpenDingTalkId 路由时仍使用原模板卡片与文字流程，不猜测身份转换。
 
@@ -75,7 +75,7 @@ Help 探测只证明 CLI 支持；订阅 ready 只证明连接已建立，均不
 通用模块自定义接线示意（内置员工适配见 `src/digital-employee-a2ui.ts`）：
 
 ```ts
-import { A2uiInteractions } from '@dingtalk-real-ai/dsh-dingtalk/a2ui'
+import { A2uiInteractions } from '@groowork/channel-dingtalk/a2ui'
 
 const interactions = new A2uiInteractions({
   source: subscriptionIdentity,

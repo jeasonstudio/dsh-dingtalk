@@ -107,7 +107,7 @@ function options(root, runner, serviceStatus = 'stopped') {
     runner,
     dshHome: path.join(root, '.dsh'),
     stateDir: path.join(root, '.dsh-dingtalk'),
-    installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.5.2',
+    installSpec: '@groowork/channel-dingtalk@0.5.2',
     serviceStatus,
   }
 }
@@ -157,7 +157,7 @@ test('机器 setup 只执行显式批准的步骤，并在私密凭据前安全�
   assert.equal(result.status, 'awaiting_private_credentials')
   assert.equal(result.accountId, 'default')
   assert.equal(result.next?.kind, 'private_command')
-  assert.match(result.next?.command ?? '', /^npx @dingtalk-real-ai\/dsh-dingtalk@0\.5\.2 setup --resume [0-9a-f-]+$/)
+  assert.match(result.next?.command ?? '', /^npx @groowork\/channel-dingtalk@0\.5\.2 setup --resume [0-9a-f-]+$/)
   assert.deepEqual(
     runner.calls.filter((call) => call[0] === 'npm' && call[1] === 'install'),
     [],
@@ -169,7 +169,7 @@ test('机器 setup 只执行显式批准的步骤，并在私密凭据前安全�
   )
   assert.deepEqual(
     runner.calls.find((call) => call[0] === 'dsh' && call[1] === 'plugin'),
-    ['dsh', 'plugin', '--profile', 'web', 'add', '@dingtalk-real-ai/dsh-dingtalk@0.5.2'],
+    ['dsh', 'plugin', '--profile', 'web', 'add', '@groowork/channel-dingtalk@0.5.2'],
   )
 
   const checkpointFile = path.join(setupOptions.stateDir, 'setup', 'checkpoints', `${result.checkpointId}.json`)
@@ -311,7 +311,7 @@ test('私密 resume 也拒绝改用 checkpoint 未批准的插件版本', async 
     () =>
       resumePrivateSetup({
         ...setupOptions,
-        installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.5.3',
+        installSpec: '@groowork/channel-dingtalk@0.5.3',
         checkpointId: first.checkpointId,
         ui: new FakeUi(),
         onboard: async () => {
@@ -416,7 +416,7 @@ test('checkpoint 绑定获批的精确插件版本，部分执行后也拒绝用
 
   const secondRunner = new FakeRunner()
   const resumed = await resumeMachineSetup(
-    { ...options(root, secondRunner), installSpec: '@dingtalk-real-ai/dsh-dingtalk@0.5.3' },
+    { ...options(root, secondRunner), installSpec: '@groowork/channel-dingtalk@0.5.3' },
     failed.checkpointId,
   )
 

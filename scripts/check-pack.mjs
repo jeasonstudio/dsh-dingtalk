@@ -72,7 +72,7 @@ try {
     [
       '--input-type=module',
       '-e',
-      `import { A2uiInteractions } from '@dingtalk-real-ai/dsh-dingtalk/a2ui';
+      `import { A2uiInteractions } from '@groowork/channel-dingtalk/a2ui';
      if (typeof A2uiInteractions !== 'function') process.exit(1);`,
     ],
     { cwd: stagedPackage, encoding: 'utf8' },

@@ -13,7 +13,7 @@ test('公开帮助只推荐正式 latest 安装渠道', () => {
   })
 
   assert.equal(result.status, 0)
-  assert.match(result.stdout, /@dingtalk-real-ai\/dsh-dingtalk@latest setup/)
+  assert.match(result.stdout, /@groowork\/channel-dingtalk@latest setup/)
   assert.doesNotMatch(result.stdout, /@beta/)
 })
 
