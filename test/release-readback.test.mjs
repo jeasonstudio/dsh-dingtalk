@@ -8,7 +8,7 @@ import test from 'node:test'
 const releaseTest = process.platform === 'win32' ? test.skip : test
 
 const expected = {
-  packageName: '@dingtalk-real-ai/dsh-dingtalk',
+  packageName: '@groowork/channel-dingtalk',
   repository: 'DingTalk-Real-AI/dsh-dingtalk',
   sha: '18f2f416090a02fa4c98df5d6f4bab447e298deb',
   version: '0.5.2',
@@ -115,7 +115,7 @@ releaseTest('精确版本暂未同步时从发布读回入口重试并成功', a
 
   assert.equal(result.status, 0, result.stderr || result.stdout)
   assert.match(result.stdout, /第 1\/2 次公开发布读回未收敛：[\s\S]*ETARGET/)
-  assert.match(result.stdout, /Verified @dingtalk-real-ai\/dsh-dingtalk@0\.5\.2/)
+  assert.match(result.stdout, /Verified @groowork\/channel-dingtalk@0\.5\.2/)
 })
 
 releaseTest('公开 CLI 暂未同步时仍在同一重试边界内恢复', async (t) => {

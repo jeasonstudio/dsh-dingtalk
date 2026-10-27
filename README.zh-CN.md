@@ -52,13 +52,13 @@ AI 可以读取安装计划、执行经过批准的非秘密步骤，并从 chec
 建议先查询正式版版本号，后续所有步骤固定使用同一版本：
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@latest --version
+npx @groowork/channel-dingtalk@latest --version
 ```
 
 把输出记为 `<version>`，然后生成严格只读计划。新安装使用 `default`；已有多个机器人时必须显式指定账号。
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --plan --json --account default
+npx @groowork/channel-dingtalk@<version> setup --plan --json --account default
 ```
 
 plan 只读取本地配置和进程表，并运行 `dsh --version`、`pnpm --version`；不会安装插件、写文件、生成绑定口令或启停进程。输出包含稳定的 `planId`、动作、所需批准和 `answerTemplate`。把模板中的 `null` 全部替换为明确选择后保存为 JSON，例如：
@@ -88,7 +88,7 @@ plan 只读取本地配置和进程表，并运行 `dsh --version`、`pnpm --ver
 没有出现在计划中的 DSH 或 pnpm 安装项应保持 `false`。出现时只有获得你的明确批准后才能改为 `true`；机器模式不会使用默认“是”。执行计划：
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --apply --json --answers <answers.json>
+npx @groowork/channel-dingtalk@<version> setup --apply --json --answers <answers.json>
 ```
 
 常见结果：
@@ -113,7 +113,7 @@ JSON 模式的 stdout 始终只有一个完整 JSON 文档。退出码 `0` 表�
 private resume 不带 `--json`，且只允许在交互式终端中运行：
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --resume <checkpoint-id>
+npx @groowork/channel-dingtalk@<version> setup --resume <checkpoint-id>
 ```
 
 TTY 检查只能避免误用管道或无头执行，不能证明终端由真人独占；能够创建或录制 PTY 的自动化仍可捕获屏幕内容。到达这个接力点后应停止 AI 执行，由你在 AI 无法控制或录制的独立终端中亲自运行命令。
@@ -121,8 +121,8 @@ TTY 检查只能避免误用管道或无头执行，不能证明终端由真人�
 完成私密步骤或绑定后，让 AI 继续检查真实状态；并发 resume 会被串行化，checkpoint 已确认完成的步骤不会重复。若进程在外部命令成功后、checkpoint 写入前被强制终止，恢复时可能重试同一个精确版本的幂等命令。
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --resume <checkpoint-id> --json
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor --json
+npx @groowork/channel-dingtalk@<version> setup --resume <checkpoint-id> --json
+npx @groowork/channel-dingtalk@<version> doctor --json
 ```
 
 最后私聊机器人发送一条真实消息。`doctor` 能验证本机配置和最近运行状态，但不能代替真实消息链路验收。
@@ -136,7 +136,7 @@ setup 通常会自动回收死进程遗留的写锁。若进程恰好在清理�
 不使用 AI 编排时，运行原有引导即可：
 
 ```bash
-npx @dingtalk-real-ai/dsh-dingtalk@latest setup
+npx @groowork/channel-dingtalk@latest setup
 ```
 
 引导会检查 DSH 和 pnpm，在缺失或版本不兼容时先征求确认，安装当前精确版本插件，收集凭据，配置 DWS、图片和访问范围，生成管理员绑定口令，并询问是否启动 `dsh web`。已有 DSH 版本不会自动升级。
@@ -150,7 +150,7 @@ DSH 处于预发布阶段时，主包及其子包的预发布版本必须在 reg
 setup 会在安装插件前读取 `npm config get registry`，并把不含 URL 内嵌凭据的 registry 写入 `$DSH_HOME/profiles/web/.npmrc`（默认 `~/.dsh/profiles/web/.npmrc`），让外层 npm 与 DSH 拉起的 pnpm 使用同一个源。已有 scoped registry、认证和其他 `.npmrc` 配置会保留。若企业源缺包，可用一个已同步完整的源重试；该覆盖会同时传到后续 pnpm：
 
 ```bash
-npm_config_registry=https://registry.npmjs.org npx @dingtalk-real-ai/dsh-dingtalk@latest setup
+npm_config_registry=https://registry.npmjs.org npx @groowork/channel-dingtalk@latest setup
 ```
 
 也可以手动设置并验证 web profile 的目录级配置；自定义 `DSH_HOME` 时请替换目录：
@@ -166,7 +166,7 @@ pnpm config get registry
 
 两种方式可以混用，始终由你发起任务：
 
-1. **在电脑上手动操作**：在终端运行 `npx @dingtalk-real-ai/dsh-dingtalk@latest setup` 修改配置，运行 `npx @dingtalk-real-ai/dsh-dingtalk@latest doctor` 检查连接；需要停止服务时在运行 `dsh web` 的终端按 `Ctrl+C`。
+1. **在电脑上手动操作**：在终端运行 `npx @groowork/channel-dingtalk@latest setup` 修改配置，运行 `npx @groowork/channel-dingtalk@latest doctor` 检查连接；需要停止服务时在运行 `dsh web` 的终端按 `Ctrl+C`。
 2. **在钉钉里让机器人协助执行**：确认 `dsh web` 已连接后，直接私聊机器人描述目标，例如“检查这个项目的测试并告诉我失败原因”。机器人会在当前会话工作区中完成 DSH 允许的操作，并在需要补充信息、Plan Review 或敏感操作审批时，通过消息或互动卡片向你确认。
 
 如果项目放在外接盘或名为 A 的卷中，例如 `/Volumes/A/my-project`，先在对应钉钉会话发送：
@@ -199,7 +199,7 @@ pnpm config get registry
 
 ### A2UI 审批与提问（默认优先，支持降级）
 
-包内提供独立于数字员工生命周期的 `@dingtalk-real-ai/dsh-dingtalk/a2ui` 模块，支持组合 approve / ask
+包内提供独立于数字员工生命周期的 `@groowork/channel-dingtalk/a2ui` 模块，支持组合 approve / ask
 卡片、校验 `user_card_action_triggered` 回调并恢复原生请求。数字员工默认使用 `interactionMode: auto`：
 探测 DWS 发卡、更新、语义摘要和回调订阅能力，通过后优先使用 A2UI；能力缺失时在发卡前降级文字。
 可配置 `interactionMode: text` 强制使用文字。不再需要员工 UUID 环境开关。
@@ -214,29 +214,29 @@ pnpm config get registry
 
 ```bash
 # 首次安装，或重新打开配置菜单
-npx @dingtalk-real-ai/dsh-dingtalk@latest setup
+npx @groowork/channel-dingtalk@latest setup
 
 # 生成 AI 可消费的只读计划
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --plan --json --account default
+npx @groowork/channel-dingtalk@<version> setup --plan --json --account default
 
 # 按非秘密 answers 执行
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --apply --json --answers <answers.json>
+npx @groowork/channel-dingtalk@<version> setup --apply --json --answers <answers.json>
 
 # 私密人工接力；必须在交互式终端运行
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --resume <checkpoint-id>
+npx @groowork/channel-dingtalk@<version> setup --resume <checkpoint-id>
 
 # AI 从同一 checkpoint 幂等续跑
-npx @dingtalk-real-ai/dsh-dingtalk@<version> setup --resume <checkpoint-id> --json
+npx @groowork/channel-dingtalk@<version> setup --resume <checkpoint-id> --json
 
 # 检查本机状态并联网验证钉钉凭据
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor
+npx @groowork/channel-dingtalk@<version> doctor
 
 # 输出稳定、脱敏的机器诊断报告
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor --json
+npx @groowork/channel-dingtalk@<version> doctor --json
 
 # 不发起网络请求
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor --offline
-npx @dingtalk-real-ai/dsh-dingtalk@<version> doctor --offline --json
+npx @groowork/channel-dingtalk@<version> doctor --offline
+npx @groowork/channel-dingtalk@<version> doctor --offline --json
 
 # 仅供 DWS connect 通过 stdin 调用；不要手工传递 Token/AuthCode
 dsh-dingtalk digital-employee register --stdin --json
@@ -246,7 +246,7 @@ dsh-dingtalk digital-employee unregister --agent-uuid <uuid> --json --yes
 `npx` 不会创建可长期使用的 `dsh-dingtalk` 命令。若希望使用该短命令，可执行一次可选的全局安装：
 
 ```bash
-npm install --global @dingtalk-real-ai/dsh-dingtalk@latest
+npm install --global @groowork/channel-dingtalk@latest
 dsh-dingtalk setup
 dsh-dingtalk doctor
 ```
@@ -272,7 +272,7 @@ input:
 推荐使用一条命令的 setup。高级用户也可以使用 DSH 原生命令：
 
 ```bash
-dsh plugin --profile web add @dingtalk-real-ai/dsh-dingtalk@latest
+dsh plugin --profile web add @groowork/channel-dingtalk@latest
 dsh web
 ```
 

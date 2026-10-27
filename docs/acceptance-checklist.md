@@ -17,7 +17,7 @@
 
 ## 真实链路
 
-- [ ] 全新环境执行 `npx @dingtalk-real-ai/dsh-dingtalk@latest setup`。
+- [ ] 全新环境执行 `npx @groowork/channel-dingtalk@latest setup`。
 - [ ] 扫码创建应用成功。
 - [ ] 手动凭据备用流程成功。
 - [ ] `dsh web` 启动并建立 Stream 连接。

@@ -1,6 +1,6 @@
 # 开发约束
 
-- 本仓库只发布 `@dingtalk-real-ai/dsh-dingtalk`，不拆分公共 SDK。
+- 本仓库只发布 `@groowork/channel-dingtalk`，不拆分公共 SDK。
 - 第一版只适配最新版 DeepSeek Harness 的 `web` profile。
 - 使用 Node.js `^22.19.0 || >=24.0.0` 与 pnpm 11；提交前运行 `pnpm run ci`。
 - 不得提交真实 Client Secret、二维码、绑定口令、用户消息、内部地址或内网仓库内容。

@@ -42,8 +42,8 @@ process.exit(result.status ?? 1)
     'profiles',
     'web',
     'node_modules',
-    '@dingtalk-real-ai',
-    'dsh-dingtalk',
+    '@groowork',
+    'channel-dingtalk',
     'lib',
     'bin.js',
   )

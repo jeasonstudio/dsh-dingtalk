@@ -41,7 +41,7 @@ exit 0
     await chmod(file, 0o755)
   }
 
-  const installedPackage = path.join(dshHome, 'profiles', 'web', 'node_modules', '@dingtalk-real-ai', 'dsh-dingtalk')
+  const installedPackage = path.join(dshHome, 'profiles', 'web', 'node_modules', '@groowork', 'channel-dingtalk')
   if (packedBinSource === undefined) {
     await mkdir(path.dirname(installedPackage), { recursive: true })
     await symlink(path.resolve('.'), installedPackage, 'dir')

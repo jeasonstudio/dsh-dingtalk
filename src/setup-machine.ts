@@ -174,7 +174,7 @@ function outcome(
 }
 
 function privateCommand(installSpec: string, checkpointId: string): MachineSetupNext {
-  const exactRegistrySpec = /^@dingtalk-real-ai\/dsh-dingtalk@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(installSpec)
+  const exactRegistrySpec = /^@groowork\/channel-dingtalk@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(installSpec)
   const executable = exactRegistrySpec ? `npx ${installSpec}` : 'dsh-dingtalk'
   return { kind: 'private_command', command: `${executable} setup --resume ${checkpointId}` }
 }

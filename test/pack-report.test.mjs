@@ -4,7 +4,7 @@ import test from 'node:test'
 import { extractPackReport } from '../scripts/pack-report.mjs'
 
 const report = {
-  name: '@dingtalk-real-ai/dsh-dingtalk',
+  name: '@groowork/channel-dingtalk',
   files: [{ path: 'package.json' }],
   unpackedSize: 1,
 }

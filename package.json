@@ -1,5 +1,5 @@
 {
-  "name": "@dingtalk-real-ai/dsh-dingtalk",
+  "name": "@groowork/channel-dingtalk",
   "version": "0.0.0-development",
   "description": "Official DingTalk connector for DeepSeek Harness",
   "type": "module",
