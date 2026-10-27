@@ -140,7 +140,7 @@ test('工具步骤压成一行过程线，定稿后收起为摘要', async () =>
   assert.equal(harness.finished.at(-1), `✅ 已完成 · 3 次工具调用\n\n${EMPTY_WARNING}`)
 })
 
-test('过程线在正文上方，正文之间不会因为步骤而粘连', async () => {
+test('工具段与输出按发生顺序堆叠：工具一段一行，输出整段跟随', async () => {
   const harness = createHarness()
   harness.renderer.onInbound('s1', harness.msg)
 
@@ -150,16 +150,28 @@ test('过程线在正文上方，正文之间不会因为步骤而粘连', async
 
   harness.call('c1', 'read', { file_path: 'src/a.ts' })
   await harness.tick()
-  assert.equal(harness.last(), '⚙️ 正在读取文件 src/a.ts\n\n先看一下文件。')
+  // Chronological: the work line of this burst sits BELOW the paragraph that
+  // preceded it and ABOVE the paragraph it will produce.
+  assert.equal(harness.last(), '先看一下文件。\n\n⚙️ 正在读取文件 src/a.ts')
 
   harness.result('c1')
   await harness.tick()
-  assert.equal(harness.last(), '⚙️ 已完成 1 步：读取文件 src/a.ts\n\n先看一下文件。')
+  assert.equal(harness.last(), '先看一下文件。\n\n⚙️ 已完成 1 步：读取文件 src/a.ts')
 
   harness.text('我看完了。')
   await harness.tick()
-  // The step separates the two paragraphs, and it stays above them.
-  assert.equal(harness.last(), '⚙️ 已完成 1 步：读取文件 src/a.ts\n\n先看一下文件。\n\n我看完了。')
+  assert.equal(harness.last(), '先看一下文件。\n\n⚙️ 已完成 1 步：读取文件 src/a.ts\n\n我看完了。')
+
+  harness.call('c2', 'grep', { pattern: 'TODO' })
+  await harness.tick()
+  harness.result('c2')
+  await harness.text('最后一段。')
+  await harness.tick()
+  // Second burst: same shape, stacked below the previous output.
+  assert.equal(
+    harness.last(),
+    '先看一下文件。\n\n⚙️ 已完成 1 步：读取文件 src/a.ts\n\n我看完了。\n\n⚙️ 已完成 1 步：搜索 TODO\n\n最后一段。',
+  )
 })
 
 test('思考与工具共用同一条过程线', async () => {
@@ -188,7 +200,7 @@ test('没有步骤可显示时，过程线用思考时长占位', async () => {
   harness.text('想好了。')
   await harness.tick()
 
-  assert.match(harness.last(), /^💭 已思考 1 秒 · 用时 \d+ 秒\n\n想好了。$/)
+  assert.equal(harness.last(), '💭 已思考 1 秒\n\n想好了。')
 })
 
 test('旧调用的结果只更新它自己那条步骤', async () => {
@@ -342,14 +354,14 @@ test('超长滚动后新卡承接过程线与未定稿正文，旧卡不重复�
 
   harness.call('c1', 'read', { file_path: 'src/a.ts' })
   await harness.tick()
-  assert.equal(harness.last(), '⚙️ 正在读取文件 src/a.ts\n\nB')
+  assert.equal(harness.last(), 'B\n\n⚙️ 正在读取文件 src/a.ts')
   assert.doesNotMatch(harness.last(), /A{2}/)
 
   harness.result('c1')
   harness.send({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
   await settled
   await harness.tick()
-  assert.equal(harness.finished.at(-1), '✅ 已完成 · 1 次工具调用\n\nB')
+  assert.equal(harness.finished.at(-1), 'B\n\n✅ 已完成 · 1 次工具调用')
 })
 
 test('PTC 模式下的嵌套调用共用一条过程线', async () => {
@@ -447,7 +459,7 @@ test('插话换卡时旧卡只留正文，过程线随新卡重建', async () =>
   harness.call('c1', 'bash', { command: 'ls', description: '列目录' })
   harness.result('c1')
   await harness.tick()
-  assert.equal(harness.last(), '⚙️ 已完成 1 步：执行命令 列目录\n\n第一段')
+  assert.equal(harness.last(), '第一段\n\n⚙️ 已完成 1 步：执行命令 列目录')
 
   harness.renderer.notifyInterleaved('c1')
   harness.call('c2', 'read', { file_path: 'src/a.ts' })
@@ -456,7 +468,7 @@ test('插话换卡时旧卡只留正文，过程线随新卡重建', async () =>
   // The settled card keeps the stable text only; the work log belongs to the
   // live card below it.
   assert.equal(harness.finished.length, 1)
-  assert.equal(harness.finished[0], '第一段\n\n> ⤵️ 输出继续，见下方新卡片')
+  assert.equal(harness.finished[0], '第一段\n\n⚙️ 已完成 1 步：执行命令 列目录\n\n> ⤵️ 输出继续，见下方新卡片')
   assert.match(harness.last(), /正在读取文件/)
 
   harness.result('c2')
