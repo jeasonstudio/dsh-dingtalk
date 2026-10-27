@@ -35,7 +35,12 @@ export interface Config {
   groupAccess: GroupAccess
   groupAllowlist: string[]
   replyMode: { direct: ReplyMode; group: ReplyMode }
-  streaming: { enabled: boolean; throttleMs: number; maxCardChars: number }
+  streaming: {
+    enabled: boolean
+    lifecycle: 'stream' | 'finalize'
+    throttleMs: number
+    maxCardChars: number
+  }
   asyncMode: boolean
   ackText: string
   queueAckText: string
@@ -130,6 +135,11 @@ export const Config: Schema<Config> = Schema.object({
     enabled: Schema.boolean()
       .default(true)
       .description('aicard 模式下是否增量流式刷新；false = 有卡片壳但等定稿一次性写入'),
+    lifecycle: Schema.union(['stream', 'finalize'])
+      .default('finalize')
+      .description(
+        'aicard 刷新方式：stream=进入钉钉「输入中」状态（原生打字机效果，但客户端会显示 [AILoading] 加载指示）；finalize=始终以完成态刷新（无加载指示、无打字机效果，每帧两次卡片接口调用）',
+      ),
     throttleMs: Schema.number().default(500).description('流式帧节流间隔（毫秒），过低易触发卡片接口限流'),
     maxCardChars: Schema.number()
       .default(15_000)

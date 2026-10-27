@@ -1,0 +1,277 @@
+<!doctype html>
+<!--
+  Playground shell: a page-level toolbar, a DingTalk chat mockup, and the frame
+  inspector around it. All dynamic content is authored in app.js so nothing here
+  has to be re-rendered when a scenario changes.
+-->
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>DingTalk 输出 Playground</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="toolbar">
+        <div class="brand">
+          <h1 class="brand-title">DingTalk 输出 Playground</h1>
+          <p class="brand-sub">用真实 Renderer 录制的 timeline，预演钉钉里最终长什么样</p>
+        </div>
+
+        <div class="transport">
+          <label class="field field-inline">
+            <span class="field-label">剧本</span>
+            <select id="scenarioSelect" class="input select"></select>
+          </label>
+          <button id="runBtn" class="btn btn-primary" type="button">运行</button>
+
+          <div class="playback" role="group" aria-label="播放控制">
+            <button id="resetBtn" class="btn btn-icon" type="button" title="重置到第 0 帧" aria-label="重置">⏮</button>
+            <button
+              id="playBtn"
+              class="btn btn-icon"
+              type="button"
+              title="播放 / 暂停（空格）"
+              aria-label="播放"
+              aria-pressed="false"
+            >
+              ▶
+            </button>
+            <button id="stepBtn" class="btn btn-icon" type="button" title="单步（→）" aria-label="单步">⏭</button>
+          </div>
+
+          <div class="speeds" id="speedGroup" role="group" aria-label="播放倍速">
+            <button class="chip" type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+            <button class="chip" type="button" data-speed="1" aria-pressed="true">1×</button>
+            <button class="chip" type="button" data-speed="2" aria-pressed="false">2×</button>
+            <button class="chip" type="button" data-speed="4" aria-pressed="false">4×</button>
+          </div>
+
+          <label class="scrub">
+            <span class="field-label">进度 <output id="progressLabel">0 / 0</output></span>
+            <input
+              id="progress"
+              class="range"
+              type="range"
+              min="0"
+              max="0"
+              value="0"
+              step="1"
+              aria-label="时间线进度"
+            />
+          </label>
+        </div>
+
+        <div class="toolbar-right">
+          <button
+            id="shellToggle"
+            class="btn shell-toggle"
+            type="button"
+            aria-pressed="false"
+            title="用虚线框标出由钉钉客户端渲染、插件无法控制的部分"
+          >
+            壳标注
+          </button>
+          <span id="dirtyHint" class="hint" hidden>设置已修改，重新运行生效</span>
+          <details id="settingsPopover" class="popover">
+            <summary class="btn popover-summary">设置</summary>
+            <div class="popover-panel">
+              <div class="setting-grid">
+                <label class="field">
+                  <span class="field-label"
+                    >回复模式 replyMode <span id="badgeReplyMode" class="field-badge">剧本默认</span></span
+                  >
+                  <select id="setReplyMode" class="input select">
+                    <option value="aicard">aicard（AI 卡片）</option>
+                    <option value="markdown">markdown（会话消息）</option>
+                    <option value="text">text（纯文本）</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label"
+                    >卡片生命周期 lifecycle <span id="badgeLifecycle" class="field-badge">全局偏好</span></span
+                  >
+                  <select id="setLifecycle" class="input select">
+                    <option value="stream">stream（输入中）</option>
+                    <option value="finalize">finalize（定型）</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label"
+                    >节流 throttleMs <span id="badgeThrottleMs" class="field-badge">剧本默认</span></span
+                  >
+                  <input id="setThrottleMs" class="input" type="number" min="1" max="10000" step="50" />
+                </label>
+                <label class="field">
+                  <span class="field-label"
+                    >卡片上限 maxCardChars <span id="badgeMaxCardChars" class="field-badge">剧本默认</span></span
+                  >
+                  <input id="setMaxCardChars" class="input" type="number" min="200" max="20000" step="100" />
+                </label>
+                <label class="field">
+                  <span class="field-label"
+                    >会话类型 conversationType
+                    <span id="badgeConversationType" class="field-badge">剧本默认</span></span
+                  >
+                  <select id="setConversationType" class="input select">
+                    <option value="direct">direct（单聊）</option>
+                    <option value="group">group（群聊）</option>
+                  </select>
+                </label>
+                <div class="field">
+                  <span class="field-label">聊天主题</span>
+                  <div class="segmented" id="themeGroup" role="group" aria-label="聊天主题">
+                    <button class="seg" type="button" data-theme-value="light" aria-pressed="true">浅色</button>
+                    <button class="seg" type="button" data-theme-value="dark" aria-pressed="false">深色</button>
+                  </div>
+                </div>
+                <div class="field">
+                  <span class="field-label">窗口宽度</span>
+                  <div class="segmented" id="deviceGroup" role="group" aria-label="窗口宽度">
+                    <button class="seg" type="button" data-device="mobile" aria-pressed="true">手机 390</button>
+                    <button class="seg" type="button" data-device="desktop" aria-pressed="false">桌面 560</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </header>
+
+      <div id="statusBar" class="statusbar" hidden>
+        <span id="statusText" class="statusbar-text"></span>
+        <button id="statusClose" class="statusbar-close" type="button" aria-label="关闭提示">✕</button>
+      </div>
+
+      <!--
+        Browsers refuse to load ES modules from file://, so a double-clicked page
+        can only explain why it stayed empty. This classic script runs regardless
+        of module support and has no other purpose.
+      -->
+      <div id="bootNotice" class="statusbar boot-notice" data-kind="warn" hidden>
+        <span class="statusbar-text">
+          浏览器禁止 <code>file://</code> 加载 ES module，所以直接双击打不开仿真器。 请在仓库根目录运行
+          <code>pnpm run playground</code>，再访问 <code>http://127.0.0.1:5188/</code>。
+        </span>
+      </div>
+      <script>
+        if (location.protocol === 'file:') document.getElementById('bootNotice').hidden = false
+      </script>
+
+      <main class="layout">
+        <aside class="col col-left">
+          <section class="panel">
+            <header class="panel-head">
+              <h2 class="panel-title">剧本</h2>
+              <span id="scenarioCount" class="panel-meta"></span>
+            </header>
+            <ul id="scenarioList" class="scenario-list"></ul>
+          </section>
+
+          <details class="panel collapse" id="labPanel">
+            <summary class="panel-head">
+              <h2 class="panel-title">Markdown 实验室</h2>
+              <span class="panel-meta">实时预览</span>
+            </summary>
+            <div class="lab">
+              <div class="lab-toolbar">
+                <label class="switch">
+                  <input id="normalizeToggle" type="checkbox" />
+                  <span>卡片规范化</span>
+                </label>
+                <span id="labCount" class="panel-meta">0 字符</span>
+              </div>
+              <textarea
+                id="labInput"
+                class="textarea"
+                rows="7"
+                spellcheck="false"
+                aria-label="实验室 markdown 输入"
+              ></textarea>
+              <p id="labNotes" class="notes" hidden></p>
+              <div class="lab-preview">
+                <div class="lab-bubble">
+                  <div class="lab-label">DeepSeek Harness</div>
+                  <div class="md" id="labPreview"></div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="panel collapse" id="galleryPanel">
+            <summary class="panel-head">
+              <h2 class="panel-title">活动行画廊</h2>
+              <span class="panel-meta">真实渲染</span>
+            </summary>
+            <div class="gallery" id="galleryBody"><p class="empty">展开后加载…</p></div>
+          </details>
+        </aside>
+
+        <section class="col col-center">
+          <div class="device-frame" id="deviceFrame" data-device="mobile">
+            <div class="chat" id="chat">
+              <header class="chat-nav">
+                <button class="chat-nav-back" type="button" tabindex="-1" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" focusable="false">
+                    <path
+                      d="M15 4.5 7.5 12l7.5 7.5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+                <h2 class="chat-nav-title" id="chatTitle">DeepSeek Harness</h2>
+                <button class="chat-nav-more" type="button" tabindex="-1" aria-hidden="true">⋯</button>
+                <!-- Legend for the shell annotation. Absolutely positioned inside the nav so
+                     toggling it never changes chat height; `hidden` removes it entirely. -->
+                <p class="chat-legend" id="shellLegend" hidden>
+                  虚线框 = 钉钉客户端渲染的壳，插件无法控制；其余均来自真实 payload
+                </p>
+              </header>
+              <div class="chat-body" id="chatBody">
+                <!-- Placeholder is replaced by the first rebuild; it keeps the mockup
+                     from looking broken if the script never runs. -->
+                <div class="message-list" id="messageList">
+                  <p class="chat-empty">还没有帧。服务就绪后会自动载入第一个剧本。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="device-hint" id="deviceHint">等待加载剧本…</p>
+        </section>
+
+        <aside class="col col-right">
+          <section class="panel inspector">
+            <header class="panel-head">
+              <h2 class="panel-title">帧检查器</h2>
+              <span id="frameStats" class="panel-meta">0 帧</span>
+            </header>
+            <div class="frame-legend" aria-hidden="true">
+              <span>t</span><span>type</span><span>cardId</span><span>字符</span>
+            </div>
+            <div class="inspector-list" id="frameList"></div>
+            <div class="inspector-detail">
+              <div class="inspector-detail-head">
+                <span id="frameDetailTitle" class="panel-meta">选择一帧查看原始 content</span>
+                <div class="inspector-actions">
+                  <button id="jumpBtn" class="btn btn-mini" type="button">定位</button>
+                  <button id="copyFrameBtn" class="btn btn-mini" type="button">复制</button>
+                  <button id="loadLabBtn" class="btn btn-mini" type="button">载入实验室</button>
+                </div>
+              </div>
+              <pre id="frameContent" class="frame-content" tabindex="0">没有选中帧。</pre>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <noscript>此页面需要启用 JavaScript 才能回放时间线。</noscript>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

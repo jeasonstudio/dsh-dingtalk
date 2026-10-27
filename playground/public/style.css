@@ -1,0 +1,1796 @@
+/*
+ * Playground styling.
+ *
+ * Two deliberately separate skins live here:
+ *  - the page shell (toolbar/panels) is always the dark neutral "workbench" look;
+ *  - the chat window is a DingTalk facsimile and only its tokens flip with
+ *    [data-theme='dark'], so reviewers can compare the real client's two modes.
+ * Token names are stable: app.js only ever sets data-theme / data-device.
+ */
+
+:root {
+  /* ---- shell (always dark) ---------------------------------------------- */
+  --shell-bg: #0f1115;
+  --shell-card: #171a1f;
+  --shell-card-hi: #1d222b;
+  --shell-border: #232833;
+  --shell-text: #e6eaf0;
+  --shell-muted: #8a8f99;
+  --shell-input: #101318;
+  --accent: #1e6fff;
+  --accent-soft: rgba(30, 111, 255, 0.16);
+  --danger: #f54a45;
+  --warning: #e6a23c;
+  /* Used only by the shell annotation outline. */
+  --accent-warn: #f0a020;
+  --ok: #2ea043;
+  --radius: 16px;
+  --font-ui: -apple-system, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ---- chat (DingTalk light) -------------------------------------------- */
+  --chat-bg: #f2f3f5;
+  --chat-nav: #ffffff;
+  --chat-text: #1f2329;
+  --chat-muted: #8a8f99;
+  --chat-divider: rgba(0, 0, 0, 0.08);
+  --bubble-me: #d3e3fd;
+  --bubble-me-text: #1f2329;
+  --bubble-robot: #ffffff;
+  --bubble-robot-text: #1f2329;
+  --card-border: #e6e8eb;
+  --card-head: #8a8f99;
+  --code-bg: #f2f3f5;
+  --code-text: #1f2329;
+  --pre-bg: #1f2329;
+  --pre-text: #e6eaf0;
+  --pre-border: transparent;
+  --quote-bar: #d6d9de;
+  --quote-text: #646a73;
+  --table-head: #f7f8fa;
+  --rule: #e6e8eb;
+  --link: #1e6fff;
+  --error-bg: #fff1f0;
+  --error-text: #c4302b;
+  --error-border: rgba(245, 74, 69, 0.28);
+  --dot-idle: #c2c7cf;
+  --dot-run: #1e6fff;
+  --dot-fail: #f54a45;
+  --reaction-bg: #ffffff;
+  --avatar-me: linear-gradient(135deg, #ffb35c, #f76b6b);
+  --avatar-robot: linear-gradient(135deg, #4d6bfe, #7b4dff);
+}
+
+[data-theme='dark'] {
+  --chat-bg: #111318;
+  --chat-nav: #1b1e24;
+  --chat-text: #e6eaf0;
+  --chat-muted: #8f96a3;
+  --chat-divider: rgba(255, 255, 255, 0.08);
+  --bubble-me: #1e3a5f;
+  --bubble-me-text: #e6eaf0;
+  --bubble-robot: #23262d;
+  --bubble-robot-text: #e6eaf0;
+  --card-border: #2f343d;
+  --card-head: #9aa2ae;
+  --code-bg: #343a46;
+  --code-text: #e6eaf0;
+  --pre-bg: #0b0d11;
+  --pre-text: #e6eaf0;
+  --pre-border: rgba(255, 255, 255, 0.09);
+  --quote-bar: #3a4050;
+  --quote-text: #a9b0bc;
+  --table-head: #2a2e36;
+  --rule: #2f343d;
+  --link: #6f9dff;
+  --error-bg: #3a1d1d;
+  --error-text: #ff9d99;
+  --error-border: rgba(245, 74, 69, 0.4);
+  --reaction-bg: #2b2f37;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--shell-bg);
+  color: var(--shell-text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin, low-contrast scrollbars everywhere; the chat mockup should never show
+   a bright OS scrollbar next to DingTalk's own visuals. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(138, 143, 153, 0.45) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(138, 143, 153, 0.4);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(138, 143, 153, 0.6);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  gap: 12px;
+  padding: 14px 20px 28px;
+}
+
+/* ======================================================================== */
+/* toolbar                                                                  */
+/* ======================================================================== */
+
+.toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--shell-card);
+  border: 1px solid var(--shell-border);
+  border-radius: var(--radius);
+}
+
+.brand {
+  min-width: 220px;
+  flex: 1 1 260px;
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.brand-sub {
+  margin: 4px 0 0;
+  color: var(--shell-muted);
+  font-size: 12px;
+}
+
+.transport {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 2 1 520px;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field-label {
+  color: var(--shell-muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+/* Where a setting value came from: scenario defaults or a manual override. */
+.field-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  color: var(--shell-muted);
+  background: rgba(138, 143, 153, 0.14);
+  border-radius: 5px;
+  font-size: 10px;
+  letter-spacing: 0;
+  line-height: 15px;
+  vertical-align: 1px;
+}
+
+.field-badge.is-override {
+  color: #8fb4ff;
+  background: var(--accent-soft);
+}
+
+.input,
+.select {
+  height: 30px;
+  padding: 0 9px;
+  color: var(--shell-text);
+  background: var(--shell-input);
+  border: 1px solid var(--shell-border);
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible,
+.btn:focus-visible,
+.chip:focus-visible,
+.seg:focus-visible,
+.frame-row:focus-visible,
+.scenario:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.select {
+  min-width: 180px;
+  max-width: 300px;
+}
+
+.btn {
+  height: 30px;
+  padding: 0 12px;
+  color: var(--shell-text);
+  background: var(--shell-card-hi);
+  border: 1px solid var(--shell-border);
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: #242a34;
+  border-color: #33404f;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #3b82ff;
+  border-color: #3b82ff;
+}
+
+.btn-icon {
+  width: 32px;
+  padding: 0;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-mini {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  border-radius: 7px;
+}
+
+.btn.is-busy {
+  cursor: progress;
+}
+
+.playback {
+  display: flex;
+  gap: 6px;
+}
+
+.speeds {
+  display: flex;
+  gap: 4px;
+}
+
+.chip {
+  height: 26px;
+  padding: 0 8px;
+  color: var(--shell-muted);
+  background: transparent;
+  border: 1px solid var(--shell-border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  color: #ffffff;
+  background: var(--accent-soft);
+  border-color: rgba(30, 111, 255, 0.55);
+}
+
+.scrub {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 180px;
+  flex: 1 1 180px;
+}
+
+.scrub .field-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scrub output {
+  color: var(--shell-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.range {
+  width: 100%;
+  height: 20px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.hint {
+  color: var(--warning);
+  font-size: 11.5px;
+  max-width: 140px;
+}
+
+/* settings popover ------------------------------------------------------- */
+
+.popover {
+  position: relative;
+}
+
+.popover-summary {
+  display: inline-flex;
+  align-items: center;
+  list-style: none;
+  user-select: none;
+}
+
+.popover-summary::-webkit-details-marker {
+  display: none;
+}
+
+.popover[open] > .popover-summary {
+  border-color: rgba(30, 111, 255, 0.55);
+  color: #ffffff;
+}
+
+.popover-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 320px;
+  padding: 14px;
+  background: var(--shell-card);
+  border: 1px solid var(--shell-border);
+  border-radius: 14px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  z-index: 40;
+}
+
+.setting-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.setting-grid .field:nth-child(5) {
+  grid-column: 1 / -1;
+}
+
+.segmented {
+  display: flex;
+  gap: 3px;
+  padding: 2px;
+  background: var(--shell-input);
+  border: 1px solid var(--shell-border);
+  border-radius: 9px;
+}
+
+.seg {
+  flex: 1;
+  height: 24px;
+  color: var(--shell-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.seg[aria-pressed='true'] {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+/* status bar ------------------------------------------------------------- */
+
+.statusbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 9px 14px;
+  background: var(--shell-card);
+  border: 1px solid var(--shell-border);
+  border-radius: 12px;
+  font-size: 12.5px;
+}
+
+.statusbar[data-kind='warn'] {
+  border-color: rgba(230, 162, 60, 0.42);
+  background: rgba(230, 162, 60, 0.08);
+}
+
+.statusbar[data-kind='error'] {
+  border-color: rgba(245, 74, 69, 0.42);
+  background: rgba(245, 74, 69, 0.08);
+}
+
+.statusbar[data-kind='ok'] {
+  border-color: rgba(46, 160, 67, 0.4);
+  background: rgba(46, 160, 67, 0.08);
+}
+
+.statusbar-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.statusbar-close {
+  color: var(--shell-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 0 2px;
+}
+
+/* Static notice for the file:// case, where no module can run. */
+.boot-notice code {
+  padding: 1px 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+/* ======================================================================== */
+/* layout                                                                   */
+/* ======================================================================== */
+
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.col-center {
+  align-items: center;
+  gap: 10px;
+}
+
+.panel {
+  background: var(--shell-card);
+  border: 1px solid var(--shell-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 13px;
+  margin: 0;
+  border-bottom: 1px solid var(--shell-border);
+  cursor: default;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.panel-meta {
+  color: var(--shell-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.collapse {
+  padding-bottom: 0;
+}
+
+.collapse > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.collapse > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapse > summary::after {
+  content: '▾';
+  color: var(--shell-muted);
+  font-size: 10px;
+  transition: transform 150ms ease;
+}
+
+.collapse[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.empty {
+  margin: 0;
+  padding: 14px 13px;
+  color: var(--shell-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ======================================================================== */
+/* left column: scenarios + labs                                            */
+/* ======================================================================== */
+
+.scenario-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.scenario {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 9px 10px;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.scenario:hover {
+  background: var(--shell-card-hi);
+  border-color: var(--shell-border);
+}
+
+.scenario.is-active {
+  background: var(--accent-soft);
+  border-color: rgba(30, 111, 255, 0.45);
+}
+
+.scenario-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--shell-text);
+}
+
+.scenario-desc {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--shell-muted);
+}
+
+.scenario-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.tag {
+  padding: 0 6px;
+  line-height: 16px;
+  color: var(--shell-muted);
+  background: rgba(138, 143, 153, 0.12);
+  border-radius: 5px;
+  font-size: 10.5px;
+}
+
+/* markdown lab ----------------------------------------------------------- */
+
+.lab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px;
+}
+
+.lab-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--shell-muted);
+  font-size: 11.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch input {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.textarea {
+  width: 100%;
+  padding: 8px 9px;
+  color: var(--shell-text);
+  background: var(--shell-input);
+  border: 1px solid var(--shell-border);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 92px;
+}
+
+.notes {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--warning);
+  background: rgba(230, 162, 60, 0.1);
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.lab-preview {
+  padding: 12px;
+  background: var(--chat-bg);
+  border-radius: 12px;
+  max-height: 340px;
+  overflow: auto;
+}
+
+.lab-bubble {
+  padding: 10px 12px;
+  color: var(--bubble-robot-text);
+  background: var(--bubble-robot);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.lab-label {
+  margin-bottom: 6px;
+  color: var(--card-head);
+  font-size: 11px;
+}
+
+/* activity gallery ------------------------------------------------------- */
+
+.gallery {
+  padding: 11px;
+  overflow-x: auto;
+}
+
+.gallery-table {
+  border-collapse: collapse;
+  width: 100%;
+  /* Wider than the 260px sidebar on purpose: the table scrolls inside the panel
+     instead of wrapping activity lines into unreadable columns. */
+  min-width: 460px;
+  font-size: 11.5px;
+}
+
+.gallery-table th,
+.gallery-table td {
+  border: 1px solid var(--shell-border);
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.gallery-table th {
+  color: var(--shell-muted);
+  font-weight: 500;
+  background: rgba(138, 143, 153, 0.08);
+  white-space: nowrap;
+}
+
+.gallery-table td:first-child {
+  white-space: nowrap;
+  color: var(--shell-muted);
+}
+
+.gallery-cell {
+  display: block;
+  width: 100%;
+  padding: 2px 4px;
+  text-align: left;
+  color: var(--shell-text);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 11.5px;
+  line-height: 1.45;
+  cursor: copy;
+}
+
+.gallery-cell:hover {
+  background: var(--accent-soft);
+}
+
+.gallery-thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  color: var(--shell-text);
+  background: rgba(138, 143, 153, 0.1);
+  border-radius: 8px;
+  font-size: 11.5px;
+}
+
+.gallery-thinking .btn-mini {
+  margin-left: auto;
+}
+
+/* process block (DSH「简洁模式」) ------------------------------------------ */
+
+.gallery-process {
+  /* Same min-width as the table: process rows must stay single-line instead of
+     wrapping into a wall of text, so the panel scrolls sideways like it already
+     does for the activity table. */
+  min-width: 460px;
+  margin-bottom: 10px;
+  padding: 8px 8px 9px;
+  background: rgba(138, 143, 153, 0.07);
+  border: 1px solid var(--shell-border);
+  border-radius: 10px;
+}
+
+.gallery-process-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.gallery-process-title {
+  margin: 0;
+  color: var(--shell-text);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.gallery-process-head .panel-meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.gallery-note {
+  margin: 3px 0 8px;
+  color: var(--shell-muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.gallery-note code {
+  padding: 0 3px;
+  color: var(--shell-text);
+  background: rgba(138, 143, 153, 0.16);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.process-state + .process-state {
+  margin-top: 8px;
+}
+
+.process-state-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.process-tag {
+  color: var(--shell-muted);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+
+.process-state-head .btn-mini {
+  margin-left: auto;
+}
+
+/* One vertical rule for the whole run: every row is a blockquote in the card. */
+.process-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 2px 8px;
+  border-left: 3px solid rgba(138, 143, 153, 0.45);
+}
+
+.process-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.process-label {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  color: var(--shell-muted);
+  background: rgba(138, 143, 153, 0.14);
+  border-radius: 4px;
+  font-size: 9.5px;
+  line-height: 15px;
+}
+
+.process-line {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 1px 4px;
+  text-align: left;
+  color: var(--shell-text);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: copy;
+}
+
+.process-line:hover {
+  background: var(--accent-soft);
+}
+
+/* ======================================================================== */
+/* chat mockup                                                              */
+/* ======================================================================== */
+
+.device-frame {
+  width: 390px;
+  max-width: 100%;
+}
+
+.device-frame[data-device='desktop'] {
+  width: 560px;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 720px;
+  overflow: hidden;
+  background: var(--chat-bg);
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 26px 70px rgba(0, 0, 0, 0.55);
+}
+
+.chat-nav {
+  position: relative;
+  flex: 0 0 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background: var(--chat-nav);
+  border-bottom: 0.5px solid var(--chat-divider);
+}
+
+/* One-line legend under the nav title. Absolute, so turning the annotation on
+   never resizes the chat body or moves a bubble by a single pixel. */
+.chat-legend {
+  position: absolute;
+  top: 100%;
+  right: 8px;
+  left: 8px;
+  z-index: 4;
+  margin: 0;
+  padding: 5px 8px;
+  color: var(--chat-muted);
+  background: var(--chat-nav);
+  border-bottom: 0.5px solid var(--chat-divider);
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 8%);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+}
+
+.chat-legend[hidden] {
+  display: none;
+}
+
+/* Shell annotation: outline only (no box-model impact) marks the parts DingTalk
+   draws for us. Anything inside a card's markdown must never match this. */
+.annotate-shell [data-emulated] {
+  outline: 1px dashed var(--accent-warn, #f0a020);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.shell-toggle[aria-pressed='true'] {
+  color: #1b1206;
+  background: var(--accent-warn);
+  border-color: transparent;
+}
+
+.chat-nav-back,
+.chat-nav-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--chat-text);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: default;
+}
+
+.chat-nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 62%;
+  margin: 0;
+  overflow: hidden;
+  color: var(--chat-text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.chat-nav-more {
+  margin-left: auto;
+  letter-spacing: 1px;
+}
+
+.chat-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+  background: var(--chat-bg);
+  scroll-behavior: auto;
+}
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-empty {
+  margin: 0;
+  padding: 28px 8px;
+  color: var(--chat-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* a turn's time divider -------------------------------------------------- */
+
+.time-sep {
+  margin: 16px 0 0;
+  color: var(--chat-muted);
+  font-size: 11px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.message-list > .time-sep:first-child {
+  margin-top: 4px;
+}
+
+/* message rows ----------------------------------------------------------- */
+
+.msg-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.msg-row:first-child {
+  margin-top: 0;
+}
+
+/* Different senders read as separate turns; same sender stays tight. */
+.msg-row.gap-lg {
+  margin-top: 24px;
+}
+
+.msg-row.me {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+  overflow: hidden;
+}
+
+.avatar-robot {
+  background: var(--avatar-robot);
+  font-size: 16px;
+}
+
+.avatar-me {
+  background: var(--avatar-me);
+}
+
+.bubble {
+  position: relative;
+  max-width: 78%;
+  padding: 9px 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.bubble-me {
+  color: var(--bubble-me-text);
+  background: var(--bubble-me);
+  border-radius: 12px 12px 4px 12px;
+  white-space: pre-wrap;
+}
+
+.bubble-robot {
+  color: var(--bubble-robot-text);
+  background: var(--bubble-robot);
+  border-radius: 12px 12px 12px 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* The AI card *is* the bubble: no double white padding. */
+.bubble-card {
+  max-width: 88%;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.md-title {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bubble-robot-text);
+}
+
+.text-bubble {
+  white-space: pre-wrap;
+}
+
+/* reaction pill ---------------------------------------------------------- */
+
+.msg-row.me.has-reaction {
+  margin-bottom: 22px;
+}
+
+.reaction-pill {
+  position: absolute;
+  right: 38px;
+  bottom: -17px;
+  padding: 1px 8px;
+  color: var(--chat-text);
+  background: var(--reaction-bg);
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+  font-size: 11px;
+  line-height: 17px;
+  white-space: nowrap;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.reaction-pill.leaving {
+  opacity: 0;
+  transform: translateY(2px) scale(0.96);
+}
+
+/* AI card ---------------------------------------------------------------- */
+
+.ai-card {
+  padding: 12px 14px;
+  color: var(--bubble-robot-text);
+  background: var(--bubble-robot);
+  border: 1px solid var(--card-border);
+  border-radius: 10px 10px 10px 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ai-card.is-failed {
+  border-color: var(--error-border);
+  box-shadow: 0 1px 2px rgba(245, 74, 69, 0.16);
+}
+
+.ai-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--card-head);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.ai-card-body {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.card-placeholder {
+  margin: 0;
+  color: var(--chat-muted);
+  font-size: 13px;
+}
+
+.status-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dot-idle);
+}
+
+.status-dot.inputing {
+  background: var(--dot-run);
+  animation: dot-pulse 1.6s ease-in-out infinite;
+}
+
+.status-dot.finished {
+  background: var(--dot-idle);
+}
+
+.status-dot.failed {
+  background: var(--dot-fail);
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(30, 111, 255, 0.5);
+    opacity: 0.75;
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(30, 111, 255, 0);
+    opacity: 1;
+  }
+}
+
+/* typing indicator ------------------------------------------------------- */
+
+.typing {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--chat-muted);
+  font-size: 12px;
+}
+
+.typing[hidden] {
+  display: none;
+}
+
+.typing-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 10px;
+}
+
+.typing-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+
+.typing-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.ai-card-error {
+  margin: 8px -14px -12px;
+  padding: 6px 14px;
+  color: var(--error-text);
+  background: var(--error-bg);
+  border-top: 1px solid var(--error-border);
+  border-radius: 0 0 9px 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-card-error[hidden] {
+  display: none;
+}
+
+/* skeleton (while /api/run is in flight) ---------------------------------- */
+
+.skeleton-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  align-items: flex-start;
+}
+
+.skeleton-row:first-child {
+  margin-top: 0;
+}
+
+.skeleton-avatar,
+.skeleton-bubble {
+  background: linear-gradient(90deg, rgba(138, 143, 153, 0.16), rgba(138, 143, 153, 0.28), rgba(138, 143, 153, 0.16));
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+.skeleton-avatar {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.skeleton-bubble {
+  width: 58%;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.skeleton-row.skeleton-me {
+  flex-direction: row-reverse;
+}
+
+.skeleton-row.skeleton-me .skeleton-bubble {
+  width: 46%;
+  height: 34px;
+}
+
+@keyframes skeleton-sweep {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -20% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dots i,
+  .status-dot.inputing,
+  .skeleton-avatar,
+  .skeleton-bubble {
+    animation: none;
+  }
+  .skeleton-avatar,
+  .skeleton-bubble {
+    background: rgba(138, 143, 153, 0.2);
+  }
+  .reaction-pill {
+    transition: none;
+  }
+}
+
+.device-hint {
+  margin: 0;
+  color: var(--shell-muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* ======================================================================== */
+/* DingTalk markdown typography (shared by chat bubbles and the lab)        */
+/* ======================================================================== */
+
+.md {
+  color: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.md > :first-child {
+  margin-top: 0;
+}
+
+.md > :last-child {
+  margin-bottom: 0;
+}
+
+.md p {
+  margin: 8px 0;
+}
+
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  margin: 12px 0 6px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.md h1 {
+  font-size: 19px;
+}
+
+.md h2 {
+  font-size: 17px;
+}
+
+.md h3 {
+  font-size: 16px;
+}
+
+.md h4,
+.md h5,
+.md h6 {
+  font-size: 15px;
+}
+
+.md blockquote {
+  margin: 8px 0;
+  padding: 1px 0 1px 10px;
+  color: var(--quote-text);
+  border-left: 3px solid var(--quote-bar);
+}
+
+.md blockquote > :first-child {
+  margin-top: 0;
+}
+
+.md blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.md code {
+  padding: 1px 5px;
+  color: var(--code-text);
+  background: var(--code-bg);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+
+.md pre {
+  margin: 8px 0;
+  padding: 10px;
+  overflow-x: auto;
+  color: var(--pre-text);
+  background: var(--pre-bg);
+  /* In dark mode the block is only slightly darker than the card, so the
+     hairline is what keeps it readable as a distinct surface. */
+  border: 1px solid var(--pre-border);
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.md pre code {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border-radius: 0;
+  font-size: 12.5px;
+}
+
+.md-table {
+  margin: 8px 0;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.md table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.md th,
+.md td {
+  padding: 6px 10px;
+  border: 1px solid var(--card-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+/* GFM column alignment arrives as the presentational `align` attribute; a CSS
+   text-align declaration would win over it, so mirror it back per value. */
+.md th[align='right'],
+.md td[align='right'] {
+  text-align: right;
+}
+
+.md th[align='center'],
+.md td[align='center'] {
+  text-align: center;
+}
+
+.md th {
+  background: var(--table-head);
+  font-weight: 600;
+}
+
+.md a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.md a:hover {
+  text-decoration: underline;
+}
+
+.md ul,
+.md ol {
+  margin: 8px 0;
+  padding-left: 1.4em;
+}
+
+.md li {
+  margin: 4px 0;
+}
+
+.md li > p {
+  margin: 4px 0;
+}
+
+.md hr {
+  height: 0;
+  margin: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.md img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.md strong {
+  font-weight: 600;
+}
+
+/* ======================================================================== */
+/* right column: frame inspector                                           */
+/* ======================================================================== */
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+  height: 720px;
+}
+
+.frame-legend {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 58px 38px;
+  gap: 6px;
+  padding: 5px 13px;
+  color: var(--shell-muted);
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--shell-border);
+}
+
+.inspector-list {
+  flex: 1 1 auto;
+  min-height: 160px;
+  overflow-y: auto;
+  padding: 4px 6px;
+}
+
+.frame-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 58px 38px;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  padding: 4px 7px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.frame-row:hover {
+  background: var(--shell-card-hi);
+}
+
+.frame-row.is-selected {
+  background: rgba(30, 111, 255, 0.14);
+  border-color: rgba(30, 111, 255, 0.4);
+}
+
+.frame-row.is-current .frame-t {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.frame-row.is-current .frame-type::after {
+  content: '';
+}
+
+.frame-t {
+  color: var(--shell-muted);
+}
+
+.frame-type {
+  overflow: hidden;
+  color: var(--shell-text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.frame-card {
+  overflow: hidden;
+  color: var(--shell-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.frame-chars {
+  color: var(--shell-muted);
+  text-align: right;
+}
+
+.inspector-detail {
+  flex: 0 0 236px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--shell-border);
+}
+
+.inspector-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 7px 11px;
+}
+
+.inspector-detail-head .panel-meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.inspector-actions {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.frame-content {
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0 11px 11px;
+  overflow: auto;
+  color: var(--shell-text);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ======================================================================== */
+/* responsive: under 1100px the side columns stack below the chat          */
+/* ======================================================================== */
+
+@media (max-width: 1099px) {
+  .app {
+    padding: 12px 12px 24px;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .col-center {
+    order: 1;
+  }
+
+  .col-left {
+    order: 2;
+  }
+
+  .col-right {
+    order: 3;
+  }
+
+  .inspector {
+    height: auto;
+    max-height: 640px;
+  }
+
+  .inspector-list {
+    max-height: 280px;
+  }
+
+  .inspector-detail {
+    flex: 0 0 200px;
+  }
+
+  .device-hint {
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 720px) {
+  .toolbar {
+    gap: 12px;
+  }
+
+  .transport {
+    flex: 1 1 100%;
+  }
+
+  .select {
+    min-width: 0;
+    max-width: none;
+    flex: 1;
+  }
+
+  .field-inline {
+    flex: 1 1 160px;
+  }
+
+  .scrub {
+    flex: 1 1 100%;
+  }
+
+  .device-frame,
+  .device-frame[data-device='desktop'] {
+    width: 100%;
+  }
+
+  .chat {
+    height: min(72vh, 720px);
+    border-radius: 20px;
+  }
+
+  .popover-panel {
+    width: min(320px, calc(100vw - 40px));
+  }
+
+  .setting-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-grid .field:nth-child(5) {
+    grid-column: auto;
+  }
+}
