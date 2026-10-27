@@ -53,7 +53,9 @@
     "test:pack": "pnpm run build && node scripts/check-pack.mjs",
     "scan:secrets": "node scripts/check-secrets.mjs",
     "ci": "pnpm run scan:secrets && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:pack",
-    "prepack": "pnpm run build"
+    "prepack": "pnpm run build",
+    "playground": "pnpm run build && node playground/server.mjs",
+    "playground:fixture": "node playground/fixture.mjs"
   },
   "keywords": [
     "dsh",

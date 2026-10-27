@@ -11,6 +11,18 @@ pnpm run ci
 
 请勿在测试、日志、Issue 或提交中加入真实 Client Secret、二维码、绑定口令、聊天内容或内部地址。
 
+## 调试输出观感（Playground）
+
+改动卡片文案、活动行或 markdown 排版时，不必每次回到真实钉钉验证：
+
+```bash
+pnpm run playground
+```
+
+本地打开 `http://127.0.0.1:5188` 的钉钉聊天仿真器，帧内容由真实 `lib/renderer.js` 录制生成，
+可以选择剧本、逐帧回放、查看每帧原始 markdown、在实验室里试排版。说明见 [playground/README.md](playground/README.md)。
+它只仿真 AI Card 与 markdown 承载，真机观感仍需最后验收一遍。
+
 ## Pull Request
 
 - 一个 PR 只解决一个清晰问题。

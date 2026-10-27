@@ -1,0 +1,137 @@
+{
+  "scenario": {
+    "id": "tool-run",
+    "title": "多工具推进 + 富文本收尾",
+    "description": "思考 → 4 次工具调用（命令/搜索/读/写）→ 表格与代码块收尾。重点看一行过程线的进度刷新、定稿收起为摘要。",
+    "tags": ["工具行", "富文本"],
+    "mode": "aicard",
+    "conversationType": "direct"
+  },
+  "options": {
+    "replyMode": "aicard",
+    "lifecycle": "finalize",
+    "throttleMs": 500,
+    "maxCardChars": 15000,
+    "conversationType": "direct",
+    "pace": 1
+  },
+  "conversation": {
+    "type": "direct",
+    "title": "DSH 助手",
+    "robotName": "DeepSeek Harness",
+    "user": {
+      "nick": "牧曈",
+      "staffId": "u_demo"
+    }
+  },
+  "durationMs": 5159,
+  "timeline": [
+    {
+      "t": 0,
+      "type": "inbound",
+      "text": "帮我把流式说明补进 README，然后跑一遍门禁",
+      "msgId": "msg_playground_1"
+    },
+    {
+      "t": 0,
+      "type": "reaction",
+      "state": "add",
+      "text": "🤔思考中"
+    },
+    {
+      "t": 0,
+      "type": "card-create",
+      "cardId": "card-1"
+    },
+    {
+      "t": 504,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "stream",
+      "flowStatus": "finished",
+      "content": "⚙️ 正在搜索 流式|streaming\n\n我先看一下 README 里流式相关的段落。"
+    },
+    {
+      "t": 1154,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "stream",
+      "flowStatus": "finished",
+      "content": "⚙️ 已完成 2 步：搜索 流式|streaming · 读取文件 README.zh-CN.md · 用时 1 秒\n\n我先看一下 README 里流式相关的段落。\n\n找到了三处需要改"
+    },
+    {
+      "t": 1662,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "stream",
+      "flowStatus": "finished",
+      "content": "⚙️ 正在编辑文件 README.zh-CN.md · 已完成 2 步：搜索 流式|streaming · 读取文件 README.zh-CN.md · 用时 2 秒\n\n我先看一下 README 里流式相关的段落。\n\n找到了三处需要改的地方，我补一节「流式输出」，然后跑门禁。"
+    },
+    {
+      "t": 2317,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "stream",
+      "flowStatus": "finished",
+      "content": "⚙️ 正在执行命令 运行完整门禁 · 已完成 3 步：读取文件 README.zh-CN.md · 编辑文件 README.zh-CN.md 等 · 用时 2 秒\n\n我先看一下 README 里流式相关的段落。\n\n找到了三处需要改的地方，我补一节「流式输出」，然后跑门禁。"
+    },
+    {
+      "t": 3259,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "stream",
+      "flowStatus": "finished",
+      "content": "⚙️ 已完成 4 步：编辑文件 README.zh-CN.md · 执行命令 运行完整门禁 等 · 用时 3 秒\n\n我先看一下 README 里流式相关的段落。\n\n找到了三处需要改的地方，我补一节「流式输出」，然后跑门禁。\n\n## 结论\n\n先把 **流式帧** 和 **定稿帧** 分开处理：正文上方是一条紧凑的过程线，定稿时收起成一行摘要。\n\n### 改动点\n\n1. `activity.ts` 把步骤压成「当前 + 最近 3 步 + 用时」的一行\n2. `aic"
+    },
+    {
+      "t": 3774,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "stream",
+      "flowStatus": "finished",
+      "content": "⚙️ 已完成 4 步：编辑文件 README.zh-CN.md · 执行命令 运行完整门禁 等 · 用时 4 秒\n\n我先看一下 README 里流式相关的段落。\n\n找到了三处需要改的地方，我补一节「流式输出」，然后跑门禁。\n\n## 结论\n\n先把 **流式帧** 和 **定稿帧** 分开处理：正文上方是一条紧凑的过程线，定稿时收起成一行摘要。\n\n### 改动点\n\n1. `activity.ts` 把步骤压成「当前 + 最近 3 步 + 用时」的一行\n2. `aicard.ts` 写入前补齐表格前的空行\n3. `renderer.ts` 的 rollover 只搬运稳定文本，不搬运瞬时过程线\n\n| 文件 | 行数 | 风险 | 说明 |\n| --- | ---: | :---: | --- |\n| `src/activity."
+    },
+    {
+      "t": 4275,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "stream",
+      "flowStatus": "finished",
+      "content": "⚙️ 已完成 4 步：编辑文件 README.zh-CN.md · 执行命令 运行完整门禁 等 · 用时 4 秒\n\n我先看一下 README 里流式相关的段落。\n\n找到了三处需要改的地方，我补一节「流式输出」，然后跑门禁。\n\n## 结论\n\n先把 **流式帧** 和 **定稿帧** 分开处理：正文上方是一条紧凑的过程线，定稿时收起成一行摘要。\n\n### 改动点\n\n1. `activity.ts` 把步骤压成「当前 + 最近 3 步 + 用时」的一行\n2. `aicard.ts` 写入前补齐表格前的空行\n3. `renderer.ts` 的 rollover 只搬运稳定文本，不搬运瞬时过程线\n\n| 文件 | 行数 | 风险 | 说明 |\n| --- | ---: | :---: | --- |\n| `src/activity.ts` | 227 | 低 | 纯展示层 |\n| `src/aicard.ts` | 297 | 中 | 帧规范化 |\n| `src/renderer.ts` | 462 | 中 | 时序与回滚 |\n\n> 过程线只占一个段落，不额外占用引用块\n\n```ts\ncon"
+    },
+    {
+      "t": 4794,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "stream",
+      "flowStatus": "finished",
+      "content": "⚙️ 已完成 4 步：编辑文件 README.zh-CN.md · 执行命令 运行完整门禁 等 · 用时 5 秒\n\n我先看一下 README 里流式相关的段落。\n\n找到了三处需要改的地方，我补一节「流式输出」，然后跑门禁。\n\n## 结论\n\n先把 **流式帧** 和 **定稿帧** 分开处理：正文上方是一条紧凑的过程线，定稿时收起成一行摘要。\n\n### 改动点\n\n1. `activity.ts` 把步骤压成「当前 + 最近 3 步 + 用时」的一行\n2. `aicard.ts` 写入前补齐表格前的空行\n3. `renderer.ts` 的 rollover 只搬运稳定文本，不搬运瞬时过程线\n\n| 文件 | 行数 | 风险 | 说明 |\n| --- | ---: | :---: | --- |\n| `src/activity.ts` | 227 | 低 | 纯展示层 |\n| `src/aicard.ts` | 297 | 中 | 帧规范化 |\n| `src/renderer.ts` | 462 | 中 | 时序与回滚 |\n\n> 过程线只占一个段落，不额外占用引用块\n\n```ts\nconst line = renderProcessLine(snapshot)\n// ⚙️ 正在执行命令 pnpm run ci · 已完成 2 步：读取文件 src/a.ts · 搜索 TODO\n```\n\n细节见 [卡片流式文档](https://open."
+    },
+    {
+      "t": 5113,
+      "type": "reaction",
+      "state": "recall",
+      "text": "🤔思考中"
+    },
+    {
+      "t": 5114,
+      "type": "card-frame",
+      "cardId": "card-1",
+      "kind": "finish",
+      "flowStatus": "finished",
+      "content": "✅ 已完成 · 4 次工具调用 · 用时 5 秒\n\n我先看一下 README 里流式相关的段落。\n\n找到了三处需要改的地方，我补一节「流式输出」，然后跑门禁。\n\n## 结论\n\n先把 **流式帧** 和 **定稿帧** 分开处理：正文上方是一条紧凑的过程线，定稿时收起成一行摘要。\n\n### 改动点\n\n1. `activity.ts` 把步骤压成「当前 + 最近 3 步 + 用时」的一行\n2. `aicard.ts` 写入前补齐表格前的空行\n3. `renderer.ts` 的 rollover 只搬运稳定文本，不搬运瞬时过程线\n\n| 文件 | 行数 | 风险 | 说明 |\n| --- | ---: | :---: | --- |\n| `src/activity.ts` | 227 | 低 | 纯展示层 |\n| `src/aicard.ts` | 297 | 中 | 帧规范化 |\n| `src/renderer.ts` | 462 | 中 | 时序与回滚 |\n\n> 过程线只占一个段落，不额外占用引用块\n\n```ts\nconst line = renderProcessLine(snapshot)\n// ⚙️ 正在执行命令 pnpm run ci · 已完成 2 步：读取文件 src/a.ts · 搜索 TODO\n```\n\n细节见 [卡片流式文档](https://open.dingtalk.com/document/orgapp/streaming-card)，或者直接看 `docs/a2ui-interactions.md`。"
+    }
+  ],
+  "logs": [
+    {
+      "t": 5114,
+      "line": "card settled (672 chars)"
+    }
+  ],
+  "stats": {
+    "entries": 13,
+    "frames": 9,
+    "cards": 1,
+    "finalChars": 673
+  }
+}

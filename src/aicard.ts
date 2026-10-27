@@ -89,8 +89,23 @@ function ensureTableBlankLines(text: string): string {
   return out.join('\n')
 }
 
-function normalize(content: string): string {
+/**
+ * Card markdown normalization applied to every frame before it is sent.
+ * Exported so the local playground renders exactly the bytes DingTalk receives.
+ */
+export function normalizeCardContent(content: string): string {
   return ensureTableBlankLines(content.replace(/\r\n/g, '\n'))
+}
+
+/**
+ * The exact `msgContent` of a streaming frame. Unfinished frames drop trailing
+ * newlines: they render as <br> and then get corrected by the next frame, which
+ * reads as flicker. Exported together with {@link normalizeCardContent} so the
+ * playground records the wire bytes instead of re-implementing this rule.
+ */
+export function cardFrameContent(content: string, finished: boolean): string {
+  const fixed = normalizeCardContent(content)
+  return finished ? fixed : fixed.replace(/\n+$/, '')
 }
 
 function isQpsLimit(status: number, body: string): boolean {
@@ -144,7 +159,7 @@ export class AICard {
       cardData: {
         cardParamMap: {
           flowStatus,
-          msgContent: normalize(content),
+          msgContent: normalizeCardContent(content),
           staticMsgContent: '',
           sys_full_json_obj: JSON.stringify({ order: ['msgContent'] }),
           config: JSON.stringify({ autoLayout: true }),
@@ -156,14 +171,11 @@ export class AICard {
 
   /** Write one streaming frame; `finished` closes the stream. */
   private async writeFrame(content: string, finished: boolean): Promise<void> {
-    const fixed = normalize(content)
     await this.call('PUT', '/v1.0/card/streaming', {
       outTrackId: this.outTrackId,
       guid: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       key: 'msgContent',
-      // Unfinished frames drop trailing newlines: they render as <br> and then
-      // get corrected by the next frame, which reads as flicker.
-      content: finished ? fixed : fixed.replace(/\n+$/, ''),
+      content: cardFrameContent(content, finished),
       isFull: true,
       isFinalize: finished,
       isError: false,
