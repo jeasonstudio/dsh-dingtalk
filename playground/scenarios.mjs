@@ -8,20 +8,20 @@
 
 const markdownAnswer = `## 结论
 
-先把 **流式帧** 和 **定稿帧** 分开处理：正文上方是一条紧凑的过程线，定稿时收起成一行摘要。
+先把 **流式帧** 和 **定稿帧** 分开处理：卡片按执行顺序堆叠，每段工具压成一行，输出整段跟在后面，定稿时最后一行折成摘要。
 
 ### 改动点
 
 1. \`activity.ts\` 把步骤压成「当前 + 最近 3 步 + 用时」的一行
 2. \`aicard.ts\` 写入前补齐表格前的空行
-3. \`renderer.ts\` 的 rollover 只搬运稳定文本，不搬运瞬时过程线
+3. \`renderer.ts\` 的 rollover 按块切分，旧卡只保留已展示的内容
 | 文件 | 行数 | 风险 | 说明 |
 | --- | ---: | :---: | --- |
 | \`src/activity.ts\` | 227 | 低 | 纯展示层 |
 | \`src/aicard.ts\` | 297 | 中 | 帧规范化 |
 | \`src/renderer.ts\` | 462 | 中 | 时序与回滚 |
 
-> 过程线只占一个段落，不额外占用引用块
+> 每段过程线只占一个段落，不额外占用引用块
 
 \`\`\`ts
 const line = renderProcessLine(snapshot)
@@ -65,7 +65,7 @@ export const scenarios = [
     id: 'tool-run',
     title: '多工具推进 + 富文本收尾',
     description:
-      '思考 → 4 次工具调用（命令/搜索/读/写）→ 表格与代码块收尾。重点看一行过程线的进度刷新、定稿收起为摘要。',
+      '思考 → 4 次工具调用（命令/搜索/读/写）→ 表格与代码块收尾。重点看每段工具压成一行、输出整段堆在它下面、定稿后最后一行收成摘要。',
     tags: ['工具行', '富文本'],
     conversationTitle: 'DSH 助手',
     user: { nick: '牧曈', text: '帮我把流式说明补进 README，然后跑一遍门禁' },
@@ -106,10 +106,34 @@ export const scenarios = [
     },
   },
   {
+    id: 'stacked-output',
+    title: '多轮输出：工具一段、输出一段往上堆',
+    description:
+      '工具/思考 → 一段输出 → 再工具 → 再输出，最后一段是最终答案。每个工具段压成一行，输出整段跟在它后面，卡片像一份执行记录，直到最终输出。',
+    tags: ['过程线', '多段输出'],
+    conversationTitle: 'DSH 助手',
+    user: { nick: '牧曈', text: '把插件装到我本地 dsh，装完告诉我改了哪些文件' },
+    async script(ctx) {
+      await ctx.reasoning('先摸底，再改，最后跑门禁。', { delay: 900 })
+      await ctx.tool('read', { file_path: 'package.json' }, { runMs: 240 })
+      await ctx.tool('grep', { query: 'install_bundle|profiles' }, { runMs: 280 })
+      await ctx.text('现在的情况：bundle 列表里还是官方版本，`cordis.patch.yml` 没动过。我先改安装脚本。')
+      await ctx.tool('edit', { file_path: 'bin/install.mjs' }, { runMs: 420 })
+      await ctx.text('安装脚本改好了：优先读本地 link，找不到再回落到 npm 版本。')
+      await ctx.tool('bash', { command: 'node bin/install.mjs --dry-run', description: '试跑安装脚本' }, { runMs: 520 })
+      await ctx.tool('bash', { command: 'pnpm run ci', description: '运行完整门禁' }, { runMs: 900 })
+      await ctx.text(
+        '跑完了。最终结论：\n\n- bundle 只把 dingtalk 换成本地构建\n- `cordis.patch.yml` 与备份逐字节一致\n- 门禁通过，520 个用例全绿',
+        { delay: 14 },
+      )
+      await ctx.end({ kind: 'completed' })
+    },
+  },
+  {
     id: 'todo-run',
     title: '带任务清单：进行中的那一项',
     description:
-      'todo_write 建 5 项清单，边做边推进状态。卡片上方多一行「📋 任务进行中：xxxxx（1/5）」，只有进行中的那一项，定稿后随过程线一起收起。',
+      'todo_write 建 5 项清单，边做边推进状态。卡片最上方多一行「📋 任务进行中：xxxxx（1/5）」，只有进行中的那一项，定稿后收起。',
     tags: ['任务清单', '过程线'],
     conversationTitle: 'DSH 助手',
     user: { nick: '牧曈', text: '按任务清单改一下卡片的换行兼容' },
@@ -132,7 +156,7 @@ export const scenarios = [
       await ctx.tool('bash', { command: 'pnpm run test', description: '运行测试' }, { runMs: 700 })
       await ctx.todos(list(4, 3))
       await ctx.text(
-        '改完了：过程线仍然只占一段，任务清单只额外多一行「进行中」。\n\n- `activity.ts` 加任务行\n- `renderer.ts` 在帧里拼上任务行\n- 回归用例锁住「只显示进行中」',
+        '改完了：每段过程线仍然只占一段，任务清单只额外多一行「进行中」。\n\n- `activity.ts` 加任务行\n- `renderer.ts` 在帧里拼上任务行\n- 回归用例锁住「只显示进行中」',
         { delay: 14 },
       )
       await ctx.end({ kind: 'completed' })
