@@ -2,10 +2,11 @@
  * Outbound orchestration: one active turn per session, rendered to the
  * conversation through the configured carrier — AI Card (streaming or
  * settle-once), markdown, plain text, or asyncMode (ack now, push later).
- * Consumes the `session/event` feed; the live streaming view is assembled
- * from `assistant/chunk` deltas plus ONE latest-activity line (thinking / the
- * tool call currently in flight), while the settled reply prefers the clean
- * aggregated `assistant/message` texts.
+ * Consumes the `session/event` feed; the live streaming view mirrors the DSH
+ * web client's 简洁 work-step group as ONE plain paragraph (the step in flight,
+ * a short breadcrumb of finished steps and the elapsed time, or the folded
+ * header once the turn ends) above the accumulated `assistant/chunk` text, while
+ * the settled reply prefers the clean aggregated `assistant/message` texts.
  */
 import type { Config, ReplyMode } from './config.js'
 import type { HostSession, HostSessionEvent } from './host.js'
@@ -15,7 +16,17 @@ import type { ReplySink } from './reply-sink.js'
 import { AICard, CardCapabilityError, type CardTarget } from './aicard.js'
 import { cardTarget } from './targets.js'
 import { describeTurnError } from './errors.js'
-import { describeToolCall, renderActivityLine, type LiveActivity } from './activity.js'
+import {
+  describeToolCall,
+  renderActivityLine,
+  renderProcessLine,
+  renderProcessSettled,
+  renderTodoLine,
+  todoSnapshot,
+  type ProcessSnapshot,
+  type TodoSnapshot,
+  type ToolActivity,
+} from './activity.js'
 
 const EMPTY_MODEL_RESPONSE =
   '⚠️ **模型本次未产出正文**\n> 可能是输出额度被推理占满，请调大 `max_tokens` 或更换模型后重试。'
@@ -31,8 +42,21 @@ interface TurnState {
   async: boolean
   /** Visible assistant text, in arrival order. */
   live: Segment[]
-  /** Latest visible activity; replaces rather than appends on every event. */
-  activity?: LiveActivity
+  /**
+   * Work steps of this turn in arrival order. The last one may still be running;
+   * the process line renders the current step plus a short breadcrumb of the
+   * finished ones, so the card keeps a little history without spending a block
+   * (and a paragraph gap) per step.
+   */
+  steps: ToolActivity[]
+  /** Start of the reasoning stretch in flight (ms); unset when not thinking. */
+  thinkingStartedAt?: number
+  /** Accumulated finished reasoning time (ms). */
+  thinkingMs: number
+  /** Latest `todo/write` snapshot of this turn, when a task is in flight. */
+  todos?: TodoSnapshot
+  /** A step happened since the last text delta, so the next delta opens a block. */
+  segmentClosed: boolean
   /** Clean final texts from assistant/message events. */
   finalParts: string[]
   cardPromise?: Promise<AICard | null>
@@ -45,8 +69,17 @@ interface TurnState {
    */
   needsRollover: boolean
   cardUnavailable: boolean
+  /** Turn start (ms), used by the settled 用时 summary. */
+  startedAt: number
   /** Chars already settled onto earlier cards; the live card shows the remainder. */
   carryOffset: number
+  /**
+   * Chars of `renderText(live)` already written to the CURRENT card. A turn
+   * that ends right after an interleaved bubble must not copy text the card
+   * below it already shows — `carryOffset` alone cannot tell "settled onto an
+   * earlier card" from "streamed onto this one".
+   */
+  streamedTextLength: number
   /** Resolves when the turn settles; the queue serializes on this. */
   settle: () => void
 }
@@ -64,16 +97,17 @@ function renderText(segments: Segment[]): string {
 }
 
 /**
- * Render the live view to markdown: accumulated assistant text blocks in
- * arrival order, followed by at most ONE activity line describing the latest
- * thinking/tool state. The activity line is intentionally not a history: the
- * card is refreshed with full frames, so call N replaces call N-1.
+ * Compose the card payload: the process line first, then the answer text.
+ *
+ * Both are plain paragraphs separated by one blank line. The process line is
+ * deliberately NOT a blockquote and never spans several blocks: DingTalk renders
+ * every block with a full paragraph gap, and merges soft line breaks inside a
+ * quote, so a multi-row work log cost half a screen. One compact paragraph keeps
+ * the same information at normal paragraph spacing.
  */
-function renderLive(segments: Segment[], activity?: LiveActivity): string {
-  const text = renderText(segments)
-  if (!activity) return text
-  const line = renderActivityLine(activity)
-  return text ? `${text}\n\n${line}` : line
+function composeContent(processLine: string, text: string): string {
+  if (!processLine) return text
+  return text ? `${processLine}\n\n${text}` : processLine
 }
 
 export interface RendererDeps {
@@ -109,12 +143,17 @@ export class Renderer {
       mode,
       async: config.asyncMode,
       live: [],
+      steps: [],
+      thinkingMs: 0,
+      segmentClosed: false,
+      startedAt: Date.now(),
       finalParts: [],
       lastFlushed: '',
       flushing: false,
       needsRollover: false,
       cardUnavailable: false,
       carryOffset: 0,
+      streamedTextLength: 0,
       settle,
     }
 
@@ -141,6 +180,35 @@ export class Renderer {
     }
   }
 
+  /** Close the reasoning stretch in flight and bank its duration. */
+  private closeThinking(st: TurnState): void {
+    if (st.thinkingStartedAt === undefined) return
+    st.thinkingMs += Date.now() - st.thinkingStartedAt
+    st.thinkingStartedAt = undefined
+  }
+
+  /**
+   * The step a tool result belongs to. Matching is by call id only: a result
+   * without one must not settle the newest running row, which would freeze a
+   * still-running step as done.
+   */
+  private runningStep(st: TurnState, callId: string | undefined): ToolActivity | undefined {
+    for (let i = st.steps.length - 1; i >= 0; i--) {
+      const step = st.steps[i]
+      if (step.callId === callId && step.state === 'running') return step
+    }
+    return undefined
+  }
+
+  private snapshot(st: TurnState): ProcessSnapshot {
+    return {
+      steps: st.steps,
+      thinkingMs: st.thinkingMs,
+      thinking: st.thinkingStartedAt !== undefined,
+      elapsedMs: Date.now() - st.startedAt,
+    }
+  }
+
   /** Settle the old card with a pointer note and continue on a fresh one. */
   private async rollover(st: TurnState, card: AICard, content: string): Promise<AICard | null> {
     st.needsRollover = false
@@ -162,22 +230,21 @@ export class Renderer {
       case 'assistant/chunk': {
         const chunk = event.data?.chunk
         if (chunk?.type === 'text-delta' && typeof chunk.text === 'string' && chunk.text !== '') {
+          this.closeThinking(st)
           const last = st.live[st.live.length - 1]
-          // Text after an activity line is a NEW visible block: the intervening
-          // thinking/tool step must keep the paragraphs apart.
-          if (last && st.activity === undefined) last.text += chunk.text
+          // Text after a step is a NEW visible block: the intervening thinking or
+          // tool run must keep the paragraphs apart.
+          if (last && !st.segmentClosed) last.text += chunk.text
           else st.live.push({ kind: 'text', text: chunk.text })
-          // Streaming text is the latest visible content on its own; the
-          // transient activity line would only duplicate it.
-          st.activity = undefined
+          st.segmentClosed = false
           this.scheduleFlush(session.id, st)
         } else if (chunk?.type === 'reasoning-delta' && typeof chunk.text === 'string' && chunk.text.trim() !== '') {
           // Reasoning deltas are not copied into the card (too long, too noisy);
-          // they only say that the agent is still thinking. Skip the line while
-          // text is already streaming, so a late reasoning delta cannot split a
-          // paragraph with a status line.
-          if (!(st.activity === undefined && st.live.length > 0)) {
-            st.activity = { kind: 'thinking' }
+          // they only drive the 正在分析请求 row and its settled duration. Skip it
+          // while text is streaming inside one block, so a late delta cannot
+          // reopen a thinking row in the middle of a paragraph.
+          if (st.segmentClosed || st.live.length === 0) {
+            st.thinkingStartedAt ??= Date.now()
             this.scheduleFlush(session.id, st)
           }
         }
@@ -185,9 +252,20 @@ export class Renderer {
       }
       case 'tool/call': {
         const name = event.data?.name ?? 'tool'
-        // One line only: a newer call replaces the previous activity instead of
-        // appending another `⚙️ <tool> ✓` row to the card.
-        st.activity = describeToolCall(name, event.data?.arguments, event.data?.callId)
+        // Append, do not replace: the process line keeps a short breadcrumb so
+        // the card says what was already done, not only what is running now.
+        st.steps.push(describeToolCall(name, event.data?.arguments, event.data?.callId))
+        this.closeThinking(st)
+        st.segmentClosed = true
+        this.scheduleFlush(session.id, st)
+        break
+      }
+      // Durable todo snapshot: the card shows the item in flight and its
+      // progress, never the whole checklist (one paragraph, no extra blocks).
+      case 'todo/write': {
+        const next = todoSnapshot(event.data?.todos)
+        if (next === undefined && st.todos === undefined) break
+        st.todos = next
         this.scheduleFlush(session.id, st)
         break
       }
@@ -195,11 +273,10 @@ export class Renderer {
         const blocks = event.data?.message?.content
         const block = blocks?.[0]
         const callId = event.data?.callId ?? block?.toolCallId ?? event.data?.message?.source?.callId
-        const current = st.activity
-        // A result for an older (or uncorrelated) call must not overwrite the
-        // newer call already running; only the latest activity is on screen.
-        if (current?.kind !== 'tool') break
-        if (current.callId !== undefined && callId !== current.callId) break
+        // A result for an older (or uncorrelated) call must not rewrite the row
+        // of the call already running.
+        const current = this.runningStep(st, callId)
+        if (!current) break
         const isError = Array.isArray(blocks) && blocks.some((item: any) => item?.isError === true)
         const failure = event.data?.error ?? (isError ? { code: 'tool_error' } : undefined)
         current.state = failure?.code === 'interrupted' ? 'stopped' : failure !== undefined ? 'error' : 'done'
@@ -209,15 +286,15 @@ export class Renderer {
       // PTC mode (`run_code`) reports nested calls on their own event pair; show
       // them through the same single line so a code-mode turn is not opaque.
       case 'tool/ptc-dispatch-start': {
-        st.activity = describeToolCall(event.data?.name ?? 'tool', event.data?.arguments, event.data?.subCallId)
+        st.steps.push(describeToolCall(event.data?.name ?? 'tool', event.data?.arguments, event.data?.subCallId))
+        this.closeThinking(st)
+        st.segmentClosed = true
         this.scheduleFlush(session.id, st)
         break
       }
       case 'tool/ptc-dispatch': {
-        const current = st.activity
-        if (current?.kind !== 'tool') break
-        const subCallId = event.data?.subCallId
-        if (current.callId !== undefined && subCallId !== current.callId) break
+        const current = this.runningStep(st, event.data?.subCallId)
+        if (!current) break
         current.state = event.data?.isError === true ? 'error' : 'done'
         this.scheduleFlush(session.id, st)
         break
@@ -255,8 +332,11 @@ export class Renderer {
     try {
       let card = st.cardPromise ? await st.cardPromise : null
       if (!card || !this.states.has(sessionId)) return
-      const full = renderLive(st.live, st.activity)
-      const content = full.slice(st.carryOffset).trimStart()
+      const leadParts = [renderTodoLine(st.todos), renderProcessLine(this.snapshot(st))]
+      // The lead lines are rebuilt every frame and live ABOVE the answer, so only
+      // the text carries a roll-over offset; it is sliced in text coordinates.
+      const lead = leadParts.filter(Boolean).join('\n\n')
+      const content = composeContent(lead, renderText(st.live).slice(st.carryOffset)).trim()
       if (!content.trim()) return
       // Over-length roll-over (Feishu streamMaxElementChars analog): settle the
       // full current card and continue the remainder on a fresh one.
@@ -274,13 +354,18 @@ export class Renderer {
         card = await this.rollover(st, card, settledText)
         if (!card || !this.states.has(sessionId)) return
         st.carryOffset = nextOffset
+        st.streamedTextLength = nextOffset
         this.scheduleFlush(sessionId, st)
         return
       } else if (content === st.lastFlushed) {
         return
       }
+      // Snapshot before the RPC: chunks arriving during it belong to the next
+      // frame, so they must not be counted as already on this card.
+      const textLength = renderText(st.live).length
       await card.stream(content)
       st.lastFlushed = content
+      st.streamedTextLength = textLength
     } catch (err) {
       this.deps.log(`stream flush error: ${err instanceof Error ? err.message : err}`)
       if (err instanceof CardCapabilityError) st.cardUnavailable = true
@@ -312,23 +397,28 @@ export class Renderer {
     const interrupted = kind === 'aborted'
 
     const substance = st.finalParts.join('\n\n').trim()
-    // The thinking placeholder is not a result: a reasoning-only turn must
-    // still surface EMPTY_MODEL_RESPONSE, and a settled card must not freeze
-    // a transient activity line.
-    const finalActivity = st.activity?.kind === 'tool' ? st.activity : undefined
-    const liveText = renderLive(st.live, finalActivity)
+    // Reasoning only says the agent is alive; it is not a result. The settled
+    // card therefore prefers the clean `assistant/message` text, and a
+    // reasoning-only turn still surfaces EMPTY_MODEL_RESPONSE.
+    this.closeThinking(st)
+    const liveText = renderText(st.live)
 
     if (interrupted) {
       // Quiet settle: freeze the old card in place, never roll over or add
       // bubbles for a dead turn (a canceled task once spawned a ghost card
-      // holding a single tool line).
+      // holding a single tool line). The folded header already says 任务已打断.
+      for (const step of st.steps) if (step.state === 'running') step.state = 'stopped'
+      const stopped = renderProcessSettled(this.snapshot(st), 'stopped')
       const card = !st.cardUnavailable && st.cardPromise ? await st.cardPromise : null
       if (card) {
         // Only the current card's remainder: earlier cards already hold the
         // settled prefix from a roll-over.
         const tail = st.carryOffset > 0 ? liveText.slice(st.carryOffset).trimStart() : liveText
+        // The folded header already carries 任务已打断; only a turn with nothing
+        // to fold needs the bare note.
+        const body = composeContent(stopped, tail)
         try {
-          await card.finish(`${tail ? `${tail}\n\n` : ''}⏹️ 任务已打断`)
+          await card.finish(body || '⏹️ 任务已打断')
           this.deps.log('card settled (interrupted)')
         } catch (err) {
           this.deps.log(`interrupted settle failed: ${err instanceof Error ? err.message : err}`)
@@ -337,33 +427,53 @@ export class Renderer {
       return
     }
 
+    // 简洁 mode folds the work steps once the answer is done: one header line
+    // survives above the answer, instead of the live breadcrumb.
+    const settledBlock = renderProcessSettled(this.snapshot(st), errText ? 'failed' : 'completed')
     // After earlier roll-overs the settled cards already hold the prefix；
     // the final card carries the remainder (clean substance replaces the live
     // view only when no roll-over consumed part of it).
     let text = st.carryOffset > 0 ? liveText.slice(st.carryOffset).trimStart() : substance || liveText
-    if (st.carryOffset > 0 && !text.trim()) text = substance ? '（完整内容见上方卡片）' : ''
     if (errText) text = text ? `${text}\n\n${errText}` : errText
-    if (!text.trim()) text = EMPTY_MODEL_RESPONSE
+    // A card with only the folded header is fine when the answer itself was
+    // already settled on an earlier card; a turn that produced no text at all
+    // still gets the empty-response warning.
+    if (!text.trim() && !substance) text = EMPTY_MODEL_RESPONSE
 
     let card = !st.cardUnavailable && st.cardPromise ? await st.cardPromise : null
     if (card && st.needsRollover && (substance || errText)) {
-      // Newer bubbles sit below the old card: settle it with a pointer and
-      // land the final answer on a fresh card at the bottom. Tool-lines-only
-      // output is not worth a fresh card.
-      card = await this.rollover(st, card, renderText(st.live).slice(st.carryOffset))
+      // Newer bubbles sit below the old card. Roll over only while output is
+      // still arriving: the old card keeps what it already streamed (plus the
+      // pointer) and the fresh card carries the remainder. If nothing is
+      // unstreamed, a pointer would be a lie and the next card would repeat the
+      // whole answer — settle in place instead. Tool-lines-only output is not
+      // worth a fresh card either.
+      const settledText = renderText(st.live)
+      const streamed = Math.max(st.carryOffset, st.streamedTextLength)
+      if (streamed > st.carryOffset && settledText.slice(streamed).trim()) {
+        const tail = liveText.slice(st.carryOffset, streamed)
+        card = await this.rollover(st, card, tail)
+        st.carryOffset = streamed
+        st.streamedTextLength = streamed
+        text = liveText.slice(streamed).trimStart()
+        if (errText) text = text ? `${text}\n\n${errText}` : errText
+      } else {
+        st.needsRollover = false
+      }
     }
+    const content = composeContent(settledBlock, text)
     if (card) {
       try {
-        if (errText) await card.fail(text)
-        else await card.finish(text)
-        this.deps.log(`card settled (${text.length} chars)`)
+        if (errText) await card.fail(content)
+        else await card.finish(content)
+        this.deps.log(`card settled (${content.length} chars)`)
         return
       } catch (err) {
         this.deps.log(`card settle failed, falling back to markdown: ${err instanceof Error ? err.message : err}`)
       }
     }
     // markdown / text / asyncMode / card-fallback all land here.
-    if (st.mode === 'text' && !errText) await outbound.sendText(st.msg, text)
-    else await outbound.sendMarkdown(st.msg, config.markdownTitle, text)
+    if (st.mode === 'text' && !errText) await outbound.sendText(st.msg, content)
+    else await outbound.sendMarkdown(st.msg, config.markdownTitle, content)
   }
 }

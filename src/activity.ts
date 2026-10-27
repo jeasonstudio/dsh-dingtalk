@@ -6,8 +6,9 @@
  * for every call.
  *
  * The AI Card is a full-overwrite streaming canvas (`isFull: true`), so the
- * renderer recomputes this line on every event: a newer activity REPLACES the
- * previous one, and the turn's tool history never accumulates in the card.
+ * renderer recomputes the whole card on every event: the step rows are kept in
+ * turn state and composed into one process line (see `renderProcessLine`), never
+ * appended to the card one by one.
  */
 
 /** DSH tool families the web client renders with a dedicated row variant. */
@@ -150,8 +151,195 @@ export function describeToolCall(name: string, argsRaw: unknown, callId?: string
 
 /** Render the current activity as one markdown blockquote line. */
 export function renderActivityLine(activity: LiveActivity): string {
-  if (activity.kind === 'thinking') return '> 💭 正在思考…'
+  if (activity.kind === 'thinking') return '> 💭 正在分析请求'
   const phrase = PHRASES[activity.variant][activity.state]
   const detail = activity.summary ? ` · ${activity.summary}` : ''
   return `> ${ICONS[activity.state]} ${phrase}${detail}`
+}
+
+/**
+ * Process line: the DSH web client's "工作步骤" group, compressed to ONE line.
+ *
+ * DSH 简洁 mode shows an expanded list of step rows while the turn runs and folds
+ * it into a single header once the answer is done. A DingTalk card cannot fold,
+ * and it also cannot spend vertical space on the work log: a real device renders
+ * every separate paragraph (and every blockquote block) with a full paragraph
+ * gap, so a six-row list became half a screen of checkmarks. The card therefore
+ * renders the same information as one paragraph — the step in flight, a short
+ * breadcrumb of what already finished, and the elapsed time — and the folded
+ * header once the turn settles. One emoji at most, no blockquote: it reads like
+ * a status sentence instead of a wall of icons.
+ */
+
+/** Breadcrumb items kept on the live line; older steps fold into the count. */
+export const MAX_PROCESS_ITEMS = 2
+
+/** Summary length inside the breadcrumb: the line must stay readable inline. */
+const ITEM_SUMMARY = 16
+
+/**
+ * The turn's todo list, reduced to what a card can show: the item in flight and
+ * how far the list has got. Derived from the durable `todo/write` snapshot, so
+ * the line survives a roll-over without replaying tool arguments.
+ */
+export interface TodoSnapshot {
+  /** `content` of the first `in_progress` item. */
+  readonly active: string
+  /** Finished items. */
+  readonly done: number
+  /** Total items in the list. */
+  readonly total: number
+  /** Further `in_progress` items (parallel work); 0 or 1 in the common case. */
+  readonly alsoActive: number
+}
+
+export type TurnOutcome = 'completed' | 'failed' | 'stopped'
+
+/**
+ * Read the `todos` payload of a `todo/write` event. Returns undefined when the
+ * list is gone or nothing is in flight — the card only ever shows the task being
+ * worked on, never the whole checklist.
+ */
+export function todoSnapshot(todos: unknown): TodoSnapshot | undefined {
+  if (!Array.isArray(todos) || todos.length === 0) return undefined
+  const items = todos.filter(
+    (item): item is { content: string; status: string } =>
+      !!item && typeof item === 'object' && typeof (item as any).content === 'string',
+  )
+  const active = items.filter((item) => item.status === 'in_progress')
+  if (active.length === 0) return undefined
+  return {
+    active: active[0].content,
+    done: items.filter((item) => item.status === 'completed').length,
+    total: items.length,
+    alsoActive: active.length - 1,
+  }
+}
+
+/**
+ * The todo line above the process line: `📋 任务进行中：压成一行过程线（2/5）`.
+ * Only the item in flight is shown, and the fraction counts finished items —
+ * the same shape as DSH's todo progress, compressed into one paragraph.
+ */
+export function renderTodoLine(todo: TodoSnapshot | undefined): string {
+  if (!todo) return ''
+  const extra = todo.alsoActive > 0 ? ` 等 ${todo.alsoActive + 1} 项` : ''
+  return `📋 任务进行中：${truncateTo(todo.active, 28)}${extra}（${todo.done}/${todo.total}）`
+}
+
+export interface ProcessSnapshot {
+  /** Tool steps in arrival order; the last one may still be running. */
+  steps: readonly ToolActivity[]
+  /** Accumulated reasoning time (ms). */
+  thinkingMs: number
+  /** True while the model is still reasoning. */
+  thinking: boolean
+  /** Whole-turn elapsed time (ms). */
+  elapsedMs: number
+}
+
+/**
+ * Short verb for the inline breadcrumb: no 已/了 prefix, no icon. The full row
+ * wording (renderActivityLine) stays the single-step vocabulary.
+ */
+const BREADCRUMB: Record<ActivityVariant, string> = {
+  bash: '执行命令',
+  read: '读取文件',
+  write: '写入文件',
+  edit: '编辑文件',
+  search: '搜索',
+  fetch: '获取网页',
+  code: '运行代码',
+  todo: '更新任务清单',
+  ask: '提问',
+  skill: '加载技能',
+  present: '交付文件',
+  other: '调用工具',
+}
+
+/** `12 秒` / `1 分 05 秒`; empty under a second (too noisy to be worth the space). */
+export function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 1000) return ''
+  const total = Math.round(ms / 1000)
+  const minutes = Math.floor(total / 60)
+  const seconds = total % 60
+  return minutes > 0 ? `${minutes} 分 ${seconds.toString().padStart(2, '0')} 秒` : `${seconds} 秒`
+}
+
+/** Clamp to N characters, ellipsis included. */
+function truncateTo(value: string, limit: number): string {
+  const chars = [...value]
+  return chars.length > limit ? `${chars.slice(0, limit - 1).join('')}…` : value
+}
+
+/** One breadcrumb item: `读取文件 src/a.ts`, `执行命令失败 pnpm test`, … */
+function breadcrumbItem(step: ToolActivity): string {
+  const verb = BREADCRUMB[step.variant]
+  const phrase = step.state === 'error' ? `${verb}失败` : step.state === 'stopped' ? `${verb}中断` : verb
+  return step.summary ? `${phrase} ${truncateTo(step.summary, ITEM_SUMMARY)}` : phrase
+}
+
+/**
+ * The live process line, or '' when the turn has nothing to report yet.
+ * Shape: `⚙️ 正在执行命令 pnpm build · 已完成 4 步：读取文件 a.ts · 搜索 TODO 等 · 用时 23 秒`
+ */
+export function renderProcessLine(snapshot: ProcessSnapshot): string {
+  const done = snapshot.steps.filter((step) => step.state !== 'running')
+  // Newest running step wins: an older call still in flight must not shadow the
+  // one the model just started.
+  let running: ToolActivity | undefined
+  for (let i = snapshot.steps.length - 1; i >= 0; i--) {
+    if (snapshot.steps[i].state === 'running') {
+      running = snapshot.steps[i]
+      break
+    }
+  }
+  const segments: string[] = []
+
+  if (snapshot.thinking) {
+    segments.push('正在分析请求')
+  } else if (running) {
+    const phrase = truncateTo(PHRASES[running.variant][running.state], 24)
+    segments.push(running.summary ? `${phrase} ${truncateTo(running.summary, ITEM_SUMMARY)}` : phrase)
+  }
+
+  if (done.length > 0) {
+    const shown = done.slice(-MAX_PROCESS_ITEMS).map(breadcrumbItem)
+    const items = done.length > shown.length ? `${shown.join(' · ')} 等` : shown.join(' · ')
+    segments.push(`已完成 ${done.length} 步：${items}`)
+  }
+
+  // Thinking time only stands alone: once steps are on the line the count and
+  // the running step already say the turn is alive, and every extra segment
+  // costs a wrapped line on a phone.
+  const thought = formatDuration(snapshot.thinkingMs)
+  if (!snapshot.thinking && done.length === 0 && !running && thought) segments.push(`已思考 ${thought}`)
+  const took = formatDuration(snapshot.elapsedMs)
+  if (took) segments.push(`用时 ${took}`)
+
+  if (segments.length === 0) return ''
+  const icon = snapshot.thinking || (!running && done.length === 0) ? '💭' : '⚙️'
+  return `${icon} ${segments.join(' · ')}`
+}
+
+/**
+ * Collapsed header: what DSH shows once the working steps fold away. Returns ''
+ * when the turn has nothing worth folding (a fast turn with no tool call), so a
+ * bare header never sits above an answer that says nothing about the work.
+ */
+export function renderProcessSettled(snapshot: ProcessSnapshot, outcome: TurnOutcome): string {
+  const details: string[] = []
+  const calls = snapshot.steps.length
+  if (calls > 0) details.push(`${calls} 次工具调用`)
+  else {
+    const thought = formatDuration(snapshot.thinkingMs)
+    if (thought) details.push(`已思考 ${thought}`)
+  }
+  const took = formatDuration(snapshot.elapsedMs)
+  if (took) details.push(`用时 ${took}`)
+  if (details.length === 0) return ''
+  const tail = ` · ${details.join(' · ')}`
+  if (outcome === 'failed') return `❌ 处理失败${tail}`
+  if (outcome === 'stopped') return `⏹️ 任务已打断${tail}`
+  return `✅ 已完成${tail}`
 }
